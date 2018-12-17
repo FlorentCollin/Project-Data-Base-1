@@ -1,5 +1,6 @@
 import copy
 
+
 class DBSchema(object):
     """docstring for DBSchema."""
     def __init__(self, name, attributes):
@@ -188,12 +189,8 @@ class Diff(Union):
 
 
 class Operation:
-    def __init__(self, symbol):
+    def __init__(self, symbol, param1, param2):
         self.symbol = symbol
-
-class Eq(Operation):
-    def __init__(self, param1, param2):
-        super().__init__("=")
         self.param1 = param1
         if not (isinstance(param2, Const) or isinstance(param2, Attribute)):
             raise ValueError(errorMessage(param2, "param2", "Const or Attribute"))
@@ -201,6 +198,27 @@ class Eq(Operation):
 
     def toSql(self):
         return str(self.param1) + self.symbol + str(self.param2)
+
+class Eq(Operation):
+    def __init__(self, param1, param2):
+        super().__init__("=", param1, param2)
+
+class Greather(Operation):
+    def __init__(self, param1, param2):
+        super().__init__(">", param1, param2)
+
+class GreatherOrEqual(Operation):
+    def __init__(self, param1, param2):
+        super().__init__(">=", param1, param2)
+
+class Less(Operation):
+    def __init__(self, param1, param2):
+        super().__init__("<", param1, param2)
+class LessOrEqal(Operation):
+    def __init__(self, param1, param2):
+        super().__init__("<=", param1, param2)
+
+
 
 class Const:
     def __init__(self, const):
