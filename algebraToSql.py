@@ -32,7 +32,7 @@ class DBSchema(object):
             if self.colsName[i] == col:
                 return self.colsType[i]
 
-class Operation:
+class Request:
     def __init__(self, table):
         if not isinstance(table, DBSchema) and not isinstance(table, Operation):
             raise ValueError(errorMessage(table, "table", "DBSchema or Operation"))
@@ -43,21 +43,47 @@ class Operation:
             return self.table.getTable()
         return self.table
 
-class Select(Operation):
+class Select(Request):
     """docstring for Select."""
     def __init__(self, table, col, value):
         super().__init__(table)
         if not isinstance(col, str):
             raise ValueError(errorMessage(col, "col", "String"))
         if not colIsInTable(col, table):
-            raise columnError("The column "+str(col)+" is not in the table "+str(table))
+            raise columnError(errorColumnMessage(col, table))
         if not checkType(value, col, table):
             raise columnError("The type of "+str(value)+" is not equal to the type of '"+str(col)+"' ("+table.getColType(col)+")")
+
+class Proj(Request):
+    def __init__(self, table, column):
+        if not colIsInTable(col, table):
+            raise columnError(errorColumnMessage(col, table))
+        super().__init__(table)
+        self.column = column
+
+class Join(Request):
+    def __init__(self, table1, table2):
+        #Ne faudrait-il pas aussi vérifier que la table se trouve bien dans la base de donnée?
+        self.table1 = table1
+        self.table2 = table2
 
 
 class columnError(Exception):
     def __init__(self, message):
         self.message = message
+
+class Operation:
+    def __init__(self, symbol):
+        self.symbol = symbol
+
+class Eq:
+    def __init__(self, param1, param2):
+        self.param1 = param1
+        self.param2 = param2
+
+
+
+
 
 def colIsInTable(col, table):
     for column in table.colsName:
@@ -71,11 +97,12 @@ def checkType(value, column, table):
             return True
     return False
 
-class Eq:
-    def __init__(self):
-        print()
-
-
+"""
+Input : value, the value to test
+Output : the type of the value for SPJRUD
+Effect : NONE
+Qu'en penses-tu si on fait ça ?
+"""
 def getType(value):
     if isinstance(value, int):
         return "int"
@@ -85,6 +112,9 @@ def getType(value):
         return "float"
     else:
         return "boolean"
+
+def errorColumnMessage(column, table):
+    return "The column "+str(column)+" is not in the table "+str(table)
 
 def errorMessage(arg, argName, correctType):
     return "Argument " + str(argName) + " must be a " + str(correctType) + ". But " + str(arg) + " is a " + str(type(arg)) + "."
@@ -101,5 +131,3 @@ db2.add("b", "int")
 print(db)
 print(db2)
 Select(db, "a", 1)
-
-
