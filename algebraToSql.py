@@ -34,8 +34,8 @@ class DBSchema(object):
 
 class Request:
     def __init__(self, table):
-        if not isinstance(table, DBSchema) and not isinstance(table, Operation):
-            raise ValueError(errorMessage(table, "table", "DBSchema or Operation"))
+        if not isinstance(table, DBSchema) and not isinstance(table, Request):
+            raise ValueError(errorMessage(table, "table", "DBSchema or Request"))
         self.table = table
 		
     def getTable(self):
@@ -45,13 +45,13 @@ class Request:
 
 class Select(Request):
     """docstring for Select."""
-    def __init__(self, table, col, value):
+    def __init__(self, table, column, value):
         super().__init__(table)
-        if not isinstance(col, str):
-            raise ValueError(errorMessage(col, "col", "String"))
-        if not colIsInTable(col, table):
-            raise columnError(errorColumnMessage(col, table))
-        if not checkType(value, col, table):
+        if not isinstance(column, str):
+            raise ValueError(errorMessage(column, "column", "String"))
+        if not colIsInTable(column, table):
+            raise columnError(errorColumnMessage(column, table))
+        if not checkType(value, column, table):
             raise columnError("The type of "+str(value)+" is not equal to the type of '"+str(col)+"' ("+table.getColType(col)+")")
 
 class Proj(Request):
@@ -63,9 +63,39 @@ class Proj(Request):
 
 class Join(Request):
     def __init__(self, table1, table2):
-        #Ne faudrait-il pas aussi vérifier que la table se trouve bien dans la base de donnée?
+        if not isinstance(table1, DBSchema):
+            raise ValueError(errorMessage(table1, "table1", "DBSchema"))
+        if not isinstance(table2, DBSchema):
+            raise ValueError(errorMessage(table2, "table2", "DBSchema"))
         self.table1 = table1
         self.table2 = table2
+
+class Rename(Request):
+    def __init__(self, table, column, newName):
+        super().__init__(table)
+        if not isinstance(column, str):
+            raise ValueError(errorMessage(column, "column", "String"))
+        if not colIsInTable(column, table):
+            raise columnError(errorColumnMessage(column, table))
+        if not isinstance(newName, str):
+            raise ValueError(errorMessage(newName, "newName", "String"))
+        self.column = column
+        self.newName = newName
+
+class Union(Request):
+    def __init__(self, table1, table2):
+        if not isinstance(table1, DBSchema):
+            raise ValueError(errorMessage(table1, "table1", "DBSchema"))
+        if not isinstance(table2, DBSchema):
+            raise ValueError(errorMessage(table2, "table2", "DBSchema"))
+        if not checkSort(table1, table2):
+            raise columnError(errorSort(table1, table2))
+        self.table1 = table1
+        self.table2 = table2
+
+class Difference(Request):
+    def __intit__(self, table1, table2):
+        print()
 
 
 class columnError(Exception):
@@ -83,7 +113,12 @@ class Eq:
 
 
 
-
+def checkSort(table1, table2):
+    for i in range(len(table1.colsName)):
+        if table1.colsName[i] != table2.colsName[i]:
+            return False
+    return True
+    
 
 def colIsInTable(col, table):
     for column in table.colsName:
@@ -113,6 +148,9 @@ def getType(value):
     else:
         return "boolean"
 
+def errorSort(table1, table2):
+    return "There any columns not compatible between "+str(table1)+" "+str(table2)
+
 def errorColumnMessage(column, table):
     return "The column "+str(column)+" is not in the table "+str(table)
 
@@ -120,8 +158,8 @@ def errorMessage(arg, argName, correctType):
     return "Argument " + str(argName) + " must be a " + str(correctType) + ". But " + str(arg) + " is a " + str(type(arg)) + "."
 
 db = DBSchema("test", ["a"], ["str"])
-a = Operation(Operation(db))
-b = Operation(a)
+a = Request(Request(db))
+b = Request(a)
 d = b.getTable()
 print(d)
 a = 1
@@ -130,4 +168,5 @@ db2 = db.copy()
 db2.add("b", "int")
 print(db)
 print(db2)
-Select(db, "a", 1)
+Select(db, "a", "a")
+Join(db, "a")
