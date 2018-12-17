@@ -50,7 +50,7 @@ class Join(Requete):
         self.table1 = table1
         self.table2 = table2
 
-    def do(self):
+    def do(self):   
         if tableExists("joinTable"):
             c.execute("drop table joinTable")
         c.execute("create table joinTable as select * from "+
