@@ -21,7 +21,7 @@ class DBSchema(object):
         self.name = name
         self.attributes = attributes
 
-    """Méthode qui renvoie True si l'attribut est bien un attribut de la relation, False sinon
+    """Méthode permettant de savoir si un attribut appartient à la relation
         Args:
             attribute (str): attribut à tester
         Returns:
@@ -69,19 +69,21 @@ class Rel:
             """Vrai copie de DBSchema car certaines relations peuvent changer ce schema
                    et on ne veut pas avoir d'effet de bord"""
             self.dbSchema = copy.deepcopy(dbSchema1)
+            
         elif isinstance(dbSchema1, Rel):
             self.dbSchema = copy.deepcopy(dbSchema1.dbSchema)
+            
         else:
             raise ValueError(errorMessage(dbSchema1, "dbSchema1", "DBSchema or Rel"))
 
         #Utilisé par la jointure, l'union et la différence qui travaillent sur plusieurs relations simultanément
         if not dbSchema2 == None:
             if isinstance(dbSchema2, DBSchema):
-                """Vrai copie de DBSchema car certaines relations peuvent changer ce schema
-                       et on ne veut pas avoir d'effet de bord"""
                 self.dbSchema2 = copy.deepcopy(dbSchema2)
+                
             elif isinstance(dbSchema2, Rel):
                 self.dbSchema2 = copy.deepcopy(dbSchema2.dbSchema)
+                
             else:
                 raise ValueError(errorMessage(dbSchema2, "dbSchema2", "DBSchema or Rel"))
 
@@ -103,9 +105,6 @@ class Select(Rel):
         if not isinstance(operation, Operation):
             raise ValueError(errorMessage(operation, "operation", "Operation"))
         self.operation = operation
-
-        if not isinstance(operation.param1, str):
-            raise ValueError(errorMessage(operation.param1, "operation.param1", "String"))
 
         #On vérifie que l'attribut de l'opération est bien un attribut du DBSchema
         if not self.dbSchema.isAttribute(operation.param1):
@@ -137,12 +136,12 @@ class Proj(Rel):
             raise ValueError(errorMessage(attributes, "attributes", "list"))
 
         #On vérifie que chaque attribut de la liste d'attributs donnée en argument est bien un attribut du DBSchema
-        for i in attributes:
-            if not self.rel.dbSchema.isAttribute(i):
-                raise ValueError(i + " is not an attribute in the DBSchema")
+        for attribute in attributes:
+            if not self.rel.dbSchema.isAttribute(attribut):
+                raise ValueError(attribut + " is not an attribute in the DBSchema")
 
         #Mise à jour de la liste d'attributs pour ne garder que les attributs de liste donnée en argument
-        self.dbSchema.attributes = {k : self.dbSchema.attributes[k] for k in attributes}
+        self.dbSchema.attributes = {attribute : self.dbSchema.attributes[k] for attribute in attributes} #Qui est dbSchema ici?
         self.attributes = attributes
 
 
@@ -150,8 +149,8 @@ class Proj(Rel):
         if delimiters:
             return "(" + self.toSql(False) + ")"
         res = "select "
-        for i in self.attributes:
-            res += i + ", "
+        for attribute in self.attributes:
+            res += attribut + ", "
         return res[:-2] + " from " + self.rel.toSql(True)
 
 
@@ -163,8 +162,8 @@ class Join(Rel):
             rel2 (Rel): relation de droite de la jointure (rel1 x rel2)"""
     def __init__(self, rel1, rel2):
         super().__init__(rel1, rel2)
-        #On rajoute à au dictionnaire d'attributs les attributs de rel2
-        self.dbSchema.attributes.update(self.dbSchema2.attributes)
+        #On rajoute au dictionnaire d'attributs les attributs de rel2
+        self.dbSchema.attributes.update(self.dbSchema2.attributes) #Vérifier que les colonnes ayant le m nom doivent avoir le m type
         self.rel1 = rel1
         self.rel2 = rel2
 
@@ -252,12 +251,18 @@ class Operation:
     """Classe représentant une opération parmi (=, >, >=, <, <=)
         Args:
             symbol (str): symbole de l'opération
-            param1 (str) : membre de gauche de l'opération. param1 doit être le nom d'un attribut
-            param2 (Const ou Attribute): membre de droite de l'opération. param2 doit être une constante ou un nom d'attribut"""
+            param1 (str) : membre de gauche de l'opération, param1 doit être le nom d'un attribut
+            param2 (Const ou Attribute): membre de droite de l'opération, param2 doit être une constante ou un nom d'attribut"""
     def __init__(self, symbol, param1, param2):
+        if symbol != "=" and symbol != ">" and symbol != ">=" and symbol != "<" and symbol != "<=": #
+            raise ValueError(errorMessage(symbol, "symbol", "=, >, >=, <, <="))
         self.symbol = symbol
+        
+        if not isinstance(parm1, str):#
+            raise ValueError(errorMessage(param1, "param1", "String"))
         self.param1 = param1
-        if not (isinstance(param2, Const) or isinstance(param2, Attribute)):
+        
+        if not (isinstance(param2, Const) and not isinstance(param2, Attribute)):#
             raise ValueError(errorMessage(param2, "param2", "Const or Attribute"))
         self.param2 = param2
 
@@ -294,6 +299,7 @@ class Const:
     """Classe qui contient une constante, utilisé lors de la sélection"""
     def __init__(self, const):
         self.const = const
+        
     def __str__(self):
         #On rajoute des "" si la constante est un String pour que la représentation en SQL soit correcte
         if isinstance(self.const, str):
@@ -305,6 +311,7 @@ class Attribute:
     """Classe qui contient un nom d'attribut, utilisé lors de la sélection"""
     def __init__(self, attribute):
         self.attribute = attribute
+        
     def __str__(self):
         return self.attribute
 
