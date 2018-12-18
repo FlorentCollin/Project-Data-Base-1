@@ -2,7 +2,10 @@ import copy
 
 
 class DBSchema(object):
-    """docstring for DBSchema."""
+    """Classe permettant de stocker le schéma d'une base de données contenant une seule relation
+        Args:
+            name (str): nom du schéma de la base de données
+            attributes (dict of (String:String): attributs de la relation (autrement dit, les colonnes de la relation)"""
     def __init__(self, name, attributes):
         if not isinstance(name, str):
             raise ValueError(errorMessage(name, "name", "String"))
@@ -14,16 +17,23 @@ class DBSchema(object):
             raise ValueError(errorMessage(attributes, "attributes", "dict of String key and value"))
         self.name = name
         self.attributes = attributes
-
+    """Méthode qui renvoie True si l'attribut est bien un attribut de la relation, False sinon
+        Args:
+            attribute (str): attribut à tester
+        Returns:
+            bool: True si l'attribut est un attribut de la relation, faux sinon"""
     def isAttribute(self, attribute):
         return attribute in self.attributes
-
-    def add(self, colName, colType):
-        self.attributes[colName] = colsType
 
     def getAttributeType(self, attribute):
         return self.attributes[attribute]
 
+    """Méthode qui vérifie si le type de value correspond au type de l'attribut
+        Args:
+            attribute (str): la colonne correspondant à la value
+            value : valeur dont on veut vérifier si le type correspond bien à la colonne (attribut)
+        Returns:
+            bool: True si le type correspond, False sinon"""
     def checkType(self, attribute, value):
         attributeType = self.getAttributeType(attribute)
         if isinstance(value, int):
@@ -43,6 +53,11 @@ class DBSchema(object):
 
 
 class Rel:
+    """Classe représentant une relation. C'est la classe mère des classes des expressions algébriques SPJRUD
+        Args:
+            dbSchema (DBSchema or Rel): schéma de base de données ou relation sur lequel la nouvelle relation va se baser
+            dbSchema2 (DBSchema or Rel): schéma de base de données ou relation utilisé par les classes Join, Union, Diff
+                                         qui travaillent sur plusieurs DBSchemas ou Relations simultanément (optionnel)"""
     def __init__(self, dbSchema1, dbSchema2 = None):
         if isinstance(dbSchema1, DBSchema):
             """Vrai copie de DBSchema car certaines relations peuvent changer ce schema
@@ -63,12 +78,16 @@ class Rel:
             else:
                 raise ValueError(errorMessage(dbSchema2, "dbSchema2", "DBSchema or Rel"))
 
+    """Méthode qui renvoie un String correspondant à la requête SQL de la relation."""
     def toSql(self, delimiters=False):
         return self.dbSchema.name
 
 
 class Select(Rel):
-    """docstring for Select."""
+    """Classe représentant la Sélection dans l'algèbre relationnelle (SPJRUD)
+        Args:
+            operation (Operation): operation à effectuer (ex: l'égalité d'un attribut et d'une constante (voir sous-classes d'Operation))
+            rel (Rel): relation sur laquelle effectuer la sélection"""
     def __init__(self, operation, rel):
         super().__init__(rel)
         self.rel = rel
@@ -96,6 +115,10 @@ class Select(Rel):
 
 
 class Proj(Rel):
+    """Classe représentant la Projection dans l'algèbre relationnelle (SPJRUD)
+        Args:
+            attributes (list of string): liste d'attributs qu'il faut garder lors de la projection
+            rel (Rel): relation sur laquelle effectuer la projection"""
     def __init__(self, attributes, rel):
         super().__init__(rel)
         self.rel = rel
@@ -121,6 +144,10 @@ class Proj(Rel):
 
 
 class Join(Rel):
+    """Classe représentant la Jointure dans l'algèbre relationnelle (SPJRUD)
+        Args:
+            rel1 (Rel): relation de gauche de la jointure (rel1 x rel2)
+            rel2 (Rel): relation de droite de la jointure (rel1 x rel2)"""
     def __init__(self, rel1, rel2):
         super().__init__(rel1, rel2)
         self.dbSchema.attributes.update(self.dbSchema2.attributes)
@@ -133,6 +160,11 @@ class Join(Rel):
         return "select * from " + self.rel1.toSql(True) + " natural join " + "(select * from " + self.rel2.toSql(True)
 
 class Rename(Rel):
+        """Classe représentant le Rennomage dans l'algèbre relationnelle (SPJRUD)
+            Args:
+                attributeFrom (str): attribut à renommer
+                attributeTo (str): String représentant le nouveau nom d'attributeFrom.
+                rel (Rel): relation sur laquelle effectuer le renommage """
     def __init__(self, attributeFrom, attributeTo, rel):
         super().__init__(rel)
         self.rel = rel
@@ -163,6 +195,10 @@ class Rename(Rel):
 
 
 class Union(Rel):
+        """Classe représentant l'Union dans l'algèbre relationnelle (SPJRUD)
+            Args:
+                rel1 (Rel): relation de gauche de l'union (rel1 u rel2)
+                rel1 (Rel): relation de droite de l'union (rel1 u rel2) """
     def __init__(self, rel1, rel2):
         super().__init__(rel1, rel2)
         if not set(self.dbSchema.attributes.keys()) == set(self.dbSchema2.attributes.keys()):
@@ -176,6 +212,10 @@ class Union(Rel):
         return "select * from " + self.rel1.toSql(True) + " union " + "(select * from " + self.rel2.toSql(True)
 
 class Diff(Union):
+        """Classe représentant la Différence dans l'algèbre relationnelle (SPJRUD)
+            Args:
+                rel1 (Rel): relation de gauche de la différence (rel1 - rel2)
+                rel1 (Rel): relation de droite de la différence (rel1 - rel2) """
     def __init__(self, rel1, rel2):
         super().__init__(rel1, rel2)
 
@@ -189,6 +229,11 @@ class Diff(Union):
 
 
 class Operation:
+    """Classe représentant une opération parmi (=, >, >=, <, <=)
+        Args:
+            symbol (str): symbole de l'opération
+            param1 (str) : membre de gauche de l'opération. param1 doit être le nom d'un attribut
+            param2 (Const ou Attribute): membre de droite de l'opération. param2 doit être une constante ou un nom d'attribut"""
     def __init__(self, symbol, param1, param2):
         self.symbol = symbol
         self.param1 = param1
@@ -200,27 +245,33 @@ class Operation:
         return str(self.param1) + self.symbol + str(self.param2)
 
 class Eq(Operation):
+    """Classe représentant l'équalité (=)"""
     def __init__(self, param1, param2):
         super().__init__("=", param1, param2)
 
 class Greather(Operation):
+    """Classe représentant l'opération (>)"""
     def __init__(self, param1, param2):
         super().__init__(">", param1, param2)
 
 class GreatherOrEqual(Operation):
+    """Classe représentant l'opération (>=)"""
     def __init__(self, param1, param2):
         super().__init__(">=", param1, param2)
 
 class Less(Operation):
+    """Classe représentant l'opération (<)"""
     def __init__(self, param1, param2):
         super().__init__("<", param1, param2)
 class LessOrEqal(Operation):
+    """Classe représentant l'opération (<=)"""
     def __init__(self, param1, param2):
         super().__init__("<=", param1, param2)
 
 
 
 class Const:
+    """Classe qui contient une constante, utilisé lors de la sélection"""
     def __init__(self, const):
         self.const = const
     def __str__(self):
@@ -230,6 +281,7 @@ class Const:
             return self.const
 
 class Attribute:
+    """Classe qui contient un nom d'attribut, utilisé lors de la sélection"""
     def __init__(self, attribute):
         self.attribute = attribute
     def __str__(self):
