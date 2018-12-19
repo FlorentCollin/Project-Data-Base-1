@@ -69,10 +69,10 @@ class Rel:
             """Vrai copie de DBSchema car certaines relations peuvent changer ce schema
                    et on ne veut pas avoir d'effet de bord"""
             self.dbSchema = copy.deepcopy(dbSchema1)
-            
+
         elif isinstance(dbSchema1, Rel):
             self.dbSchema = copy.deepcopy(dbSchema1.dbSchema)
-            
+
         else:
             raise ValueError(errorMessage(dbSchema1, "dbSchema1", "DBSchema or Rel"))
 
@@ -80,10 +80,10 @@ class Rel:
         if not dbSchema2 == None:
             if isinstance(dbSchema2, DBSchema):
                 self.dbSchema2 = copy.deepcopy(dbSchema2)
-                
+
             elif isinstance(dbSchema2, Rel):
                 self.dbSchema2 = copy.deepcopy(dbSchema2.dbSchema)
-                
+
             else:
                 raise ValueError(errorMessage(dbSchema2, "dbSchema2", "DBSchema or Rel"))
 
@@ -137,11 +137,11 @@ class Proj(Rel):
 
         #On vérifie que chaque attribut de la liste d'attributs donnée en argument est bien un attribut du DBSchema
         for attribute in attributes:
-            if not self.rel.dbSchema.isAttribute(attribut):
+            if not self.rel.dbSchema.isAttribute(attribute):
                 raise ValueError(attribut + " is not an attribute in the DBSchema")
 
         #Mise à jour de la liste d'attributs pour ne garder que les attributs de liste donnée en argument
-        self.dbSchema.attributes = {attribute : self.dbSchema.attributes[k] for attribute in attributes} #Qui est dbSchema ici?
+        self.dbSchema.attributes = {key : self.dbSchema.attributes[key] for key in attributes}
         self.attributes = attributes
 
 
@@ -150,7 +150,7 @@ class Proj(Rel):
             return "(" + self.toSql(False) + ")"
         res = "select "
         for attribute in self.attributes:
-            res += attribut + ", "
+            res += attribute + ", "
         return res[:-2] + " from " + self.rel.toSql(True)
 
 
@@ -173,11 +173,11 @@ class Join(Rel):
         return "select * from " + self.rel1.toSql(True) + " natural join " + "(select * from " + self.rel2.toSql(True)
 
 class Rename(Rel):
-        """Classe représentant le Rennomage dans l'algèbre relationnelle (SPJRUD)
-            Args:
-                attributeFrom (str): attribut à renommer
-                attributeTo (str): String représentant le nouveau nom d'attributeFrom.
-                rel (Rel): relation sur laquelle effectuer le renommage """
+    """Classe représentant le Rennomage dans l'algèbre relationnelle (SPJRUD)
+        Args:
+            attributeFrom (str): attribut à renommer
+            attributeTo (str): String représentant le nouveau nom d'attributeFrom.
+            rel (Rel): relation sur laquelle effectuer le renommage """
     def __init__(self, attributeFrom, attributeTo, rel):
         super().__init__(rel)
         self.rel = rel
@@ -213,10 +213,10 @@ class Rename(Rel):
 
 
 class Union(Rel):
-        """Classe représentant l'Union dans l'algèbre relationnelle (SPJRUD)
-            Args:
-                rel1 (Rel): relation de gauche de l'union (rel1 u rel2)
-                rel1 (Rel): relation de droite de l'union (rel1 u rel2) """
+    """Classe représentant l'Union dans l'algèbre relationnelle (SPJRUD)
+        Args:
+            rel1 (Rel): relation de gauche de l'union (rel1 u rel2)
+            rel1 (Rel): relation de droite de l'union (rel1 u rel2) """
     def __init__(self, rel1, rel2):
         super().__init__(rel1, rel2)
         #On vérifie que les attributs de rel1 sont égaux au attributs de rel2 (ie: sorte(rel1) = sorte(rel2))
@@ -231,20 +231,17 @@ class Union(Rel):
         return "select * from " + self.rel1.toSql(True) + " union " + "(select * from " + self.rel2.toSql(True)
 
 class Diff(Union): #Hérite de Union car la différence à les mêmes restrictions sur les attributs des relations que l'union
-        """Classe représentant la Différence dans l'algèbre relationnelle (SPJRUD)
-            Args:
-                rel1 (Rel): relation de gauche de la différence (rel1 - rel2)
-                rel1 (Rel): relation de droite de la différence (rel1 - rel2) """
+    """Classe représentant la Différence dans l'algèbre relationnelle (SPJRUD)
+        Args:
+            rel1 (Rel): relation de gauche de la différence (rel1 - rel2)
+            rel1 (Rel): relation de droite de la différence (rel1 - rel2) """
     def __init__(self, rel1, rel2):
         super().__init__(rel1, rel2)
 
     def toSql(self, delimiters=False):
         if delimiters:
             return "(" + self.toSql(False) + ")"
-        res = "select distinct * from " + self.rel1.toSql(True) + " where ("
-        for i in self.dbSchema.attributes.keys():
-            res += i + ", "
-        return res[:-2] + ") not in " + self.rel2.toSql(True)
+        return "select * from " + self.rel1.toSql(True) + " except " + self.rel2.toSql(True)
 
 
 class Operation:
@@ -257,11 +254,11 @@ class Operation:
         if symbol != "=" and symbol != ">" and symbol != ">=" and symbol != "<" and symbol != "<=": #
             raise ValueError(errorMessage(symbol, "symbol", "=, >, >=, <, <="))
         self.symbol = symbol
-        
+
         if not isinstance(parm1, str):#
             raise ValueError(errorMessage(param1, "param1", "String"))
         self.param1 = param1
-        
+
         if not (isinstance(param2, Const) and not isinstance(param2, Attribute)):#
             raise ValueError(errorMessage(param2, "param2", "Const or Attribute"))
         self.param2 = param2
@@ -299,7 +296,7 @@ class Const:
     """Classe qui contient une constante, utilisé lors de la sélection"""
     def __init__(self, const):
         self.const = const
-        
+
     def __str__(self):
         #On rajoute des "" si la constante est un String pour que la représentation en SQL soit correcte
         if isinstance(self.const, str):
@@ -311,7 +308,7 @@ class Attribute:
     """Classe qui contient un nom d'attribut, utilisé lors de la sélection"""
     def __init__(self, attribute):
         self.attribute = attribute
-        
+
     def __str__(self):
         return self.attribute
 
