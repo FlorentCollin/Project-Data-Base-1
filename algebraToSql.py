@@ -1,6 +1,6 @@
 import copy
 import sqlite3
-
+import pandas as pd
 
 class DBSchema(object):
     """Classe représentant un schema de base de données."""
@@ -401,16 +401,23 @@ class SQLite:
                     schema[t[1]] = t[2]
 
             db.addTable(Table(row[0], schema))
+        connexion.close()
         return db
 
-    def execute(self, request):
-        if not isinstance(request, str):
-            raise TypeError(errorMessage(request, "request", "string"))
+    def execute(self, request, _print = False):
+        if not isinstance(request, Rel):
+            raise TypeError(errorMessage(request, "request", "Rel"))
 
         connexion = sqlite3.connect(self.dbFile)
         cursor = connexion.cursor()
-        cursor.execute(request)
-        print(cursor.fetchall())
+        cursor.execute(request.toSql())
+        result = cursor.fetchall()
+        if _print:
+            df = pd.DataFrame(result)
+            df.columns = request.table.schema.keys()
+            print(df)
+        return result
+
 
 def errorMessage(arg, argName, correctType):
     return "Argument " + str(argName) + " must be a " + str(correctType) + "."
@@ -419,7 +426,5 @@ def errorMessage(arg, argName, correctType):
 if __name__ == "__main__":
     s = SQLite("test.db")
     table = s.dbSchema.get("personne")
-    print(table)
-    # a = Proj(["nom"], Rel(table))
-    # print(a.toSql())
-    # s.execute(a.toSql())
+    a = Proj(["prenom","age","nom"], Rel(table))
+    s.execute(a, True)
