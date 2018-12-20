@@ -8,25 +8,49 @@ class DBSchema(object):
             name (str): nom du schéma de la base de données
             attributes (dict of (String:String): attributs de la relation (autrement dit, les colonnes de la relation)
                         ex : attributes = {"Name":"TEXT", "Number:"INTEGER"}"""
-    def __init__(self, schemas):
+    def __init__(self, schemas = None):
         #Vérification des types
-        if not isinstance(schemas, dict):
-            raise TypeError(errorMessage(schemas, "schemas", "Dict"))
+        if schemas != None:
+            if not isinstance(schemas, dict):
+                raise TypeError(errorMessage(schemas, "schemas", "Dict"))
 
-        if not all(isinstance(key, str) for key in list(schemas.keys())):
-            raise TypeError("Keys of schemas must be String")
+            if not all(isinstance(key, str) for key in list(schemas.keys())):
+                raise TypeError("Keys of schemas must be String")
 
-        if not all(isinstance(value, dict) for value in list(schemas.values())):
-            raise TypeError("Values of schemas must be dict")
+            if not all(isinstance(value, dict) for value in list(schemas.values())):
+                raise TypeError("Values of schemas must be dict")
 
-        for subSchema in schemas.values():
-            if not all(isinstance (key, str) for key in list(subSchema.keys())):
-                raise TypeError("Keys of subSchemas must be String")
+            for subSchema in schemas.values():
+                if not all(isinstance (key, str) for key in list(subSchema.keys())):
+                    raise TypeError("Keys of subSchemas must be String")
 
-            if not all(isinstance (value, str) for value in list(subSchema.values())):
-                raise TypeError("Values of subSchemas must be String")
+                if not all(isinstance (value, str) for value in list(subSchema.values())):
+                    raise TypeError("Values of subSchemas must be String")
+            self.schemas = schemas
+        else:
+            self.schemas = {}
 
+    def setSchema(self, schemas):
         self.schemas = schemas
+
+    def hasSchemas(self):
+        return self.schemas != {}
+
+    def addRelation(self, name, relation):
+        if not isinstance(name, str):
+            raise TypeError(errorMessage(name, "name", "string"))
+        
+        if not isinstance(relation, dict):
+            raise TypeError(errorMessage(relation, "relation", "dict"))
+
+        if not all(isinstance(key, str) for key in list(relation.keys())):
+            raise TypeError("Keys of relation must be String")
+        
+        if not all(isinstance(value, str) for value in list(relation.values())):
+            raise TypeError("Values of relaiton must be String")
+
+        self.schemas[name] = relation
+        
 
     """Méthode permettant de savoir si un attribut appartient à la relation
         Args:
@@ -105,6 +129,10 @@ class DBSchema(object):
     def __repr__(self):
         return __str__
 
+class Table:
+    def __init__(self, name, dbSchema):
+        self.name = name
+        self.dbSchema = dbSchema
 
 class Rel:
     """Classe représentant une relation. C'est la classe mère des classes des expressions algébriques SPJRUD
@@ -373,6 +401,13 @@ class ExtentionError(Exception):
     def __init__(self, message):
         self.message = message
 
+class SqlRequest:
+    def __init__(self, message):
+        if not isinstance(message, str):
+            raise TypeError(errorMessage(message, "message", "string"))
+
+        self.message = message
+
 class Sql:
     def __init__(self, dbFile):
         if not isinstance(dbFile, str):
@@ -380,9 +415,50 @@ class Sql:
         if dbFile[-3:] != ".db":
             raise ExtentionError(extentionMessage(dbFile[-3:], ".db"))
         self.dbFile = dbFile
+        self.dbSchema = self.getDBSchema()
 
+    """
+        Méthode permettant de récupérer le dbSchema d'une base de données
+        Returns :
+            Le dbSchema de la base de données
+    """
     def getDBSchema(self):
-        print()
+        connexion = sqlite3.connect(self.dbFile)
+        cursor = connexion.cursor()
+        cursor.execute("select name from sqlite_master where type='table'")
+        db = DBSchema()
+        for row in cursor.fetchall():
+            info = cursor.execute("select sql from sqlite_master where type='table' and name = '"+row[0]+"'").fetchone()
+            info = info[0]
+            parentPassed = False
+            res = ""
+            for i in info:
+                if i == "(":
+                    parentPassed = True
+                if parentPassed == True:
+                    res += i
+            res = res[1:-1]
+            res = res.split(",")
+            attributes = {}
+            for sub in res:
+                t = sub.split(" ")
+                if(t[0] != ""):
+                    attributes[t[0]] = t[1]
+                else:
+                    attributes[t[1]] = t[2]
+            db.addRelation(row[0], attributes)
+        return db
+
+    def do(self, request):
+        if not isinstance(request, str):
+            raise TypeError(errorMessage(request, "request", "string"))
+        
+        connexion = Sqlite3.connect(self.dbFile)
+        cursor = connexion.cursor()
+        cursor.execute(request)
+        print(cursor.fetchall())
+    
+        
 
 def extentionMessage(extention, correctExtetion):
     return "The extention must be "+str(correctExtention)+", however it is "+str(extention)+"."
@@ -421,8 +497,8 @@ def doSql(connexion, request, dbSchema):
 
 if __name__ == "__main__":
     conn = sqlite3.connect("testSql.db")
-
     connexion = conn.cursor()
+    
 
     print(type(connexion))
 
@@ -431,15 +507,25 @@ if __name__ == "__main__":
     connexion.execute("insert into personne values ('Collin', 'Florent', 20)")
     connexion.execute("insert into personne values ('Huon', 'Cyril', 20)")
 
+    connexion.execute("create table code (nom text, prenom text, language text)")
+    connexion.execute("insert into code values ('Cassart', 'Justin', 'JAVA')")
+    connexion.execute("insert into code values ('Cassart', 'Justin', 'PYTHON')")
+    connexion.execute("insert into code values ('Collin', 'Florent', 'JAVA')")
+    connexion.execute("insert into code values ('Collin', 'Florent', 'PYTHON')")
+    connexion.execute("insert into code values ('Collin', 'Florent', 'C++')")
     # db = DBSchema("emp", {"A":"TEXT","B":"INT"})
     # a = Diff(Proj(["A"], Rel(db)), Select(Eq("A", Const("Jean")), Proj(["A"], Rel(db))))
     # print(a.toSql())
     #db = DBSchema("personne", {"nom":"TEXT", "prenom":"TEXT", "age":"INTEGER"})
-    #a = Proj(["prenom","nom"], Select(Greather("age", Const(10)), Rel(db)))
+    
     #print(a.toSql())
     #doSql(connexion, a.toSql(), db)
 
     db = DBSchema({"personnes" : {"Name" : "TEXT", "Surname" : "TEXT", "Age" : "INTEGER"},
                    "parents" : {"Name" : "INTEGER", "Surname" : "TEXT", "NumChildren" : "INTEGER"}})
 
-    print(db)
+    #sql = Sql("testSql.db")
+    #db = sql.dbSchema
+    a = Proj(["prenom","nom"], Select(Greather("age", Const(10)), Rel(db)))
+    print(a.tosql())
+    #sql.do(a)
