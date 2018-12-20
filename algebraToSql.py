@@ -81,37 +81,20 @@ class Table(object):
             return False
 
     def __str__(self): #A MODIFIER
-        listTab = []
-        namesTitle = "| Names |"
-        typesTitle = "| Types |"
-        for i in range(len(list(self.schemas.keys()))):
-            subSchema = list(self.schemas.values())[i]
-            names = namesTitle
-            types = typesTitle
-            for j in range(len(list(subSchema.keys()))):
-                name = list(subSchema.keys())[j]
-                typ = list(subSchema.values())[j]
-                if len(name) > len(typ):
-                    names += name + " |"
-                    types += typ + " "*(len(name)-len(typ)) + " |"
-                else:
-                    names += name + " "*(len(typ)-len(name)) + " |"
-                    types += typ + " |"
-            borders = "-"*len(names)
-            l = int((len(names)-len(namesTitle))/2) - int((len(list(self.schemas.keys())[i]))/2)-1
-            title = "|" + " "*l + list(self.schemas.keys())[i] + " "*l + "|"
-            res = " "*len(namesTitle) + "-"*len(title)+"\n"+" "*len(namesTitle)+title+"\n"+borders+"\n"+names+"\n"+types+"\n"+borders
-            listTab.append(res)
-
-        finalRes = ""
-        for tab in listTab:
-            finalRes += tab+"\n"+""+"\n"
-        return finalRes
+        names = "Name  |"
+        types = "Types |"
+        for attribute in self.schema:
+            maximum = max(len(attribute), len(self.schema[attribute]))
+            names += " "+attribute+" "*(maximum-len(attribute))+" |"
+            types += " "+self.schema[attribute]+" "*(maximum-len(self.schema[attribute]))+" |"
+        l = len(names)
+        lenName = len(self.name)
+        title = " "*(int(l/2)-int(lenName/2))+str(self.name)
+        borders = "-"*l
+        return title+"\n"+borders+"\n"+names+"\n"+types+"\n"+borders
 
     def __repr__(self):
         return __str__
-
-
 
 class Rel:
     """Classe représentant une relation. C'est la classe mère des classes des expressions algébriques SPJRUD
@@ -436,6 +419,7 @@ def errorMessage(arg, argName, correctType):
 if __name__ == "__main__":
     s = SQLite("test.db")
     table = s.dbSchema.get("personne")
-    a = Proj(["nom"], Rel(table))
-    print(a.toSql())
-    s.execute(a.toSql())
+    print(table)
+    # a = Proj(["nom"], Rel(table))
+    # print(a.toSql())
+    # s.execute(a.toSql())
