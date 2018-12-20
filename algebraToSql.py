@@ -3,54 +3,40 @@ import sqlite3
 
 
 class DBSchema(object):
-    """Classe permettant de stocker le schéma d'une base de données contenant une seule relation
-        Args:
-            name (str): nom du schéma de la base de données
-            attributes (dict of (String:String): attributs de la relation (autrement dit, les colonnes de la relation)
-                        ex : attributes = {"Name":"TEXT", "Number:"INTEGER"}"""
-    def __init__(self, schemas = None):
-        #Vérification des types
-        if schemas != None:
-            if not isinstance(schemas, dict):
-                raise TypeError(errorMessage(schemas, "schemas", "Dict"))
-
-            if not all(isinstance(key, str) for key in list(schemas.keys())):
-                raise TypeError("Keys of schemas must be String")
-
-            if not all(isinstance(value, dict) for value in list(schemas.values())):
-                raise TypeError("Values of schemas must be dict")
-
-            for subSchema in schemas.values():
-                if not all(isinstance (key, str) for key in list(subSchema.keys())):
-                    raise TypeError("Keys of subSchemas must be String")
-
-                if not all(isinstance (value, str) for value in list(subSchema.values())):
-                    raise TypeError("Values of subSchemas must be String")
-            self.schemas = schemas
+    """Classe représentant un schema de base de données."""
+    def addTable(self, table):
+        if not isinstance(table, Table):
+            raise TypeError(table + " : table must be a Table")
+        if not hasattr(self, "tables"):
+            self.tables = {table.name:table}
         else:
-            self.schemas = {}
+            self.tables[table.name] = table
 
-    def setSchema(self, schemas):
-        self.schemas = schemas
+    def get(self, name):
+        return self.tables[name]
 
-    def hasSchemas(self):
-        return self.schemas != {}
 
-    def addRelation(self, name, relation):
+class Table(object):
+    """Classe permettant de stocker une table
+        Args:
+            name (str): nom de la table
+            schema (dict of (String:String): attributs de la table (autrement dit, les colonnes de la table)
+                        ex : schema = {"Name":"TEXT", "Number:"INTEGER"}"""
+    def __init__(self,name, schema):
+        #Vérification des types
         if not isinstance(name, str):
-            raise TypeError(errorMessage(name, "name", "string"))
-        
-        if not isinstance(relation, dict):
-            raise TypeError(errorMessage(relation, "relation", "dict"))
+            raise TypeError(name + " : name must be a String")
 
-        if not all(isinstance(key, str) for key in list(relation.keys())):
-            raise TypeError("Keys of relation must be String")
-        
-        if not all(isinstance(value, str) for value in list(relation.values())):
-            raise TypeError("Values of relaiton must be String")
+        if not isinstance(schema, dict):
+            raise TypeError(errorMessage(schema, "schema", "Dict"))
 
-        self.schemas[name] = relation
-        
+        if not all(isinstance(key, str) for key in list(schema.keys())):
+            raise TypeError("Keys of schema must be String")
+
+        if not all(isinstance(value, str) for value in list(schema.values())):
+            raise TypeError("Values of schema must be String")
+        self.name = name
+        self.schema = schema
 
     """Méthode permettant de savoir si un attribut appartient à la relation
         Args:
@@ -58,8 +44,8 @@ class DBSchema(object):
             relationName (str) : nom de la relation
         Returns:
             bool: True si l'attribut est un attribut de la relation, faux sinon"""
-    def isAttribute(self, attribute, relationName):
-        if relationName in self.schemas and attribute in self.schemas[relationName]:
+    def isAttribute(self, attribute):
+        if attribute in list(self.schema.keys()):
             return True
         return False
 
@@ -71,14 +57,10 @@ class DBSchema(object):
         Returns :
             Le type de l'attribut si l'attribut appartient à la relation
     """
-    def getAttributeType(self, attribute, relationName):
-        #Test de si la relation appartient à la base de donnée
-        if self.isAttribute(attribute, relationName):
-            for i in range(len(self.schemas.keys())):
-                if list(self.schemas.keys())[i] == relationName:
-                    return list(self.schemas.values())[i][attribute]
-        else:
-            raise AttributeError(errorMessage(attribute, "attribute", "String"))
+    def getAttributeType(self, attribute):
+        if not self.isAttribute(attribute):
+            raise AttributeError(str(attribute) + " is not an attribute of the table")
+        return self.schema[attribute]
 
     """Méthode qui vérifie si le type de value correspond au type de l'attribut
         Args:
@@ -86,8 +68,8 @@ class DBSchema(object):
             value : valeur dont on veut vérifier si le type correspond bien à la colonne (attribut)
         Returns:
             bool: True si le type correspond, False sinon"""
-    def checkType(self, attribute, value, relationName):
-        attributeType = self.getAttributeType(attribute, relationName)
+    def checkType(self, attribute, value):
+        attributeType = self.getAttributeType(attribute)
         #Remplacement du type python par le type accepté par SQLite3
         if isinstance(value, int):
             return attributeType == "INTEGER"
@@ -98,7 +80,7 @@ class DBSchema(object):
         else:
             return False
 
-    def __str__(self):
+    def __str__(self): #A MODIFIER
         listTab = []
         namesTitle = "| Names |"
         typesTitle = "| Types |"
@@ -129,44 +111,41 @@ class DBSchema(object):
     def __repr__(self):
         return __str__
 
-class Table:
-    def __init__(self, name, dbSchema):
-        self.name = name
-        self.dbSchema = dbSchema
+
 
 class Rel:
     """Classe représentant une relation. C'est la classe mère des classes des expressions algébriques SPJRUD
         Args:
-            dbSchema (DBSchema or Rel): schéma de base de données ou relation sur lequel la nouvelle relation va se baser
-            dbSchema2 (DBSchema or Rel): schéma de base de données ou relation utilisé par les classes Join, Union, Diff
-                                         qui travaillent sur plusieurs DBSchemas ou Relations simultanément (optionnel)"""
-    def __init__(self, dbSchema1, dbSchema2 = None):
+            table (table or Rel): schéma de base de données ou relation sur lequel la nouvelle relation va se baser
+            table2 (table or Rel): schéma de base de données ou relation utilisé par les classes Join, Union, Diff
+                                         qui travaillent sur plusieurs tables ou Relations simultanément (optionnel)"""
+    def __init__(self, table1, table2 = None):
         #Vérification des types + copie du schéma de base de données pour ne pas modifier le schéma d'origine
-        if isinstance(dbSchema1, DBSchema):
-            """Vrai copie de DBSchema car certaines relations peuvent changer ce schema
+        if isinstance(table1, Table):
+            """Vrai copie de table car certaines relations peuvent changer ce schema
                    et on ne veut pas avoir d'effet de bord"""
-            self.dbSchema = copy.deepcopy(dbSchema1)
+            self.table = copy.deepcopy(table1)
 
-        elif isinstance(dbSchema1, Rel):
-            self.dbSchema = copy.deepcopy(dbSchema1.dbSchema)
+        elif isinstance(table1, Rel):
+            self.table = copy.deepcopy(table1.table)
 
         else:
-            raise ValueError(errorMessage(dbSchema1, "dbSchema1", "DBSchema or Rel"))
+            raise ValueError(errorMessage(table2, "table2", "Table or Rel"))
 
         #Utilisé par la jointure, l'union et la différence qui travaillent sur plusieurs relations simultanément
-        if not dbSchema2 == None:
-            if isinstance(dbSchema2, DBSchema):
-                self.dbSchema2 = copy.deepcopy(dbSchema2)
+        if not table2 == None:
+            if isinstance(table2, Table):
+                self.table2 = copy.deepcopy(table2)
 
-            elif isinstance(dbSchema2, Rel):
-                self.dbSchema2 = copy.deepcopy(dbSchema2.dbSchema)
+            elif isinstance(table2, Rel):
+                self.table2 = copy.deepcopy(table2.table)
 
             else:
-                raise ValueError(errorMessage(dbSchema2, "dbSchema2", "DBSchema or Rel"))
+                raise ValueError(errorMessage(table2, "table2", "Table or Rel"))
 
     """Méthode qui renvoie un String correspondant à la requête SQL de la relation."""
     def toSql(self, delimiters=False):
-        return self.dbSchema.name
+        return self.table.name
 
 
 class Select(Rel):
@@ -183,17 +162,17 @@ class Select(Rel):
             raise ValueError(errorMessage(operation, "operation", "Operation"))
         self.operation = operation
 
-        #On vérifie que l'attribut de l'opération est bien un attribut du DBSchema
-        if not self.dbSchema.isAttribute(operation.param1):
-            raise AttributeError('"' + operation.param1 + '"' + " in operation is not an attribute of the DBSchema")
+        #On vérifie que l'attribut de l'opération est bien un attribut du table
+        if not self.table.isAttribute(operation.param1):
+            raise AttributeError('"' + operation.param1 + '"' + " in operation is not an attribute of the table")
 
-        #Si le membre de droite de l'opération est aussi un attribut, on vérifie qu'il fait bien partie du DBSchema
-        if isinstance(operation.param2, Attribute) and not self.dbSchema.isAttribute(operation.param2.attribute):
-            raise AttributeError('"' + operation.param2 + '"' + " in operation is not an attribute of the DBSchema")
+        #Si le membre de droite de l'opération est aussi un attribut, on vérifie qu'il fait bien partie du table
+        if isinstance(operation.param2, Attribute) and not self.table.isAttribute(operation.param2.attribute):
+            raise AttributeError('"' + operation.param2 + '"' + " in operation is not an attribute of the table")
 
         #Si le membre de droite de l'opération est une constante, on vérifie que le type de cette constante correspond au type de l'attribut
-        if isinstance(operation.param2, Const) and not self.dbSchema.checkType(operation.param1, operation.param2.const):
-            raise ValueError("The type of operation.param2 doesn't correspond to attribute's type : " + str(self.dbSchema.getAttributeType(operation.param1)))
+        if isinstance(operation.param2, Const) and not self.table.checkType(operation.param1, operation.param2.const):
+            raise ValueError("The type of operation.param2 doesn't correspond to attribute's type : " + str(self.table.getAttributeType(operation.param1)))
 
     def toSql(self, delimiters=False):
         if delimiters:
@@ -204,21 +183,21 @@ class Select(Rel):
 class Proj(Rel):
     """Classe représentant la Projection dans l'algèbre relationnelle (SPJRUD)
         Args:
-            attributes (list of string): liste d'attributs qu'il faut garder lors de la projection
+            schema (list of string): liste d'attributs qu'il faut garder lors de la projection
             rel (Rel): relation sur laquelle effectuer la projection"""
     def __init__(self, attributes, rel):
         super().__init__(rel)
         self.rel = rel
         if not isinstance(attributes, list):
-            raise ValueError(errorMessage(attributes, "attributes", "list"))
+            raise ValueError(errorMessage(schema, "schema", "list"))
 
-        #On vérifie que chaque attribut de la liste d'attributs donnée en argument est bien un attribut du DBSchema
+        #On vérifie que chaque attribut de la liste d'attributs donnée en argument est bien un attribut de la table
         for attribute in attributes:
-            if not self.rel.dbSchema.isAttribute(attribute):
-                raise ValueError(attribute + " is not an attribute in the DBSchema")
+            if not self.rel.table.isAttribute(attribute):
+                raise ValueError(attribute + " is not an attribute in the table")
 
         #Mise à jour de la liste d'attributs pour ne garder que les attributs de liste donnée en argument
-        self.dbSchema.attributes = {key : self.dbSchema.attributes[key] for key in attributes}
+        self.table.schema = {key : self.table.schema[key] for key in attributes}
         self.attributes = attributes
 
 
@@ -240,14 +219,14 @@ class Join(Rel):
     def __init__(self, rel1, rel2):
         super().__init__(rel1, rel2)
         #On rajoute au dictionnaire d'attributs les attributs de rel2
-        self.dbSchema.attributes.update(self.dbSchema2.attributes) #Vérifier que les colonnes ayant le m nom doivent avoir le m type
+        self.table.schema.update(self.table2.schema) #Vérifier que les colonnes ayant le m nom doivent avoir le m type
         self.rel1 = rel1
         self.rel2 = rel2
 
     def toSql(self, delimiters=False):
         if delimiters:
             return "(" + self.toSql(False) + ")"
-        return "select * from " + self.rel1.toSql(True) + " natural join " + "(select * from " + self.rel2.toSql(True)
+        return "select * from " + self.rel1.toSql(True) + " natural join " + "(select * from " + self.rel2.toSql(True) + ")"
 
 class Rename(Rel):
     """Classe représentant le Rennomage dans l'algèbre relationnelle (SPJRUD)
@@ -258,29 +237,29 @@ class Rename(Rel):
     def __init__(self, attributeFrom, attributeTo, rel):
         super().__init__(rel)
         self.rel = rel
-        #On vérifie qu'attributeFrom est bien le nom d'un attribut du DBSchema
-        if not self.dbSchema.isAttribute(attributeFrom):
+        #On vérifie qu'attributeFrom est bien le nom d'un attribut du table
+        if not self.table.isAttribute(attributeFrom):
             raise AttributeError(attributeFrom + " is not the name of an attribute")
         self.attributeFrom = attributeFrom
 
         if not isinstance(attributeTo, str):
             raise ValueError(errorMessage(attributeTo, "attributeTo", "String"))
 
-        #On vérifie qu'attributeTo n'est pas déjà un nom d'attribut du DBSchema
-        if self.dbSchema.isAttribute(attributeTo):
+        #On vérifie qu'attributeTo n'est pas déjà un nom d'attribut du table
+        if self.table.isAttribute(attributeTo):
             raise AttributeError(attributeTo + " is already a name of another attribute")
         self.attributeTo = attributeTo
 
-        #Ajout de l'attribut attributeTo au DBSchema
-        self.dbSchema.attributes[attributeTo] = self.dbSchema.attributes[attributeFrom]
-        #Supression de l'attribut attributeFrom au DBSchema
-        del self.dbSchema.attributes[attributeFrom]
+        #Ajout de l'attribut attributeTo au table
+        self.table.schema[attributeTo] = self.table.schema[attributeFrom]
+        #Supression de l'attribut attributeFrom au table
+        del self.table.schema[attributeFrom]
 
     def toSql(self, delimiters=False):
         if delimiters:
             return "(" + self.toSql(False) + ")"
         res = "select "
-        for i in list(self.rel.dbSchema.attributes.keys()):
+        for i in list(self.rel.table.schema.keys()):
             if i == self.attributeFrom:
                 res += i + ' "' + self.attributeTo + '", '
             else:
@@ -297,15 +276,18 @@ class Union(Rel):
     def __init__(self, rel1, rel2):
         super().__init__(rel1, rel2)
         #On vérifie que les attributs de rel1 sont égaux au attributs de rel2 (ie: sorte(rel1) = sorte(rel2))
-        if not set(self.dbSchema.attributes.keys()) == set(self.dbSchema2.attributes.keys()):
+        if not set(self.table.schema.keys()) == set(self.table2.schema.keys()):
             raise SorteError("Sorte of rel1 must be equal to sorte of rel2")
+        for attribute in list(self.table.schema.keys()):
+            if not (self.table.getAttributeType(attribute) == self.table2.getAttributeType(attribute)):
+                raise TypeError("All attribute's type of rel1 and rel2 must be equal")
         self.rel1 = rel1
         self.rel2 = rel2
 
     def toSql(self, delimiters=False):
         if delimiters:
             return "(" + self.toSql(False) + ")"
-        return "select * from " + self.rel1.toSql(True) + " union " + "(select * from " + self.rel2.toSql(True)
+        return "select * from " + self.rel1.toSql(True) + " union " + "(select * from " + self.rel2.toSql(True) + ")"
 
 class Diff(Union): #Hérite de Union car la différence à les mêmes restrictions sur les attributs des relations que l'union
     """Classe représentant la Différence dans l'algèbre relationnelle (SPJRUD)
@@ -362,7 +344,7 @@ class Less(Operation):
     """Classe représentant l'opération (<)"""
     def __init__(self, param1, param2):
         super().__init__("<", param1, param2)
-        
+
 class LessOrEqal(Operation):
     """Classe représentant l'opération (<=)"""
     def __init__(self, param1, param2):
@@ -415,18 +397,18 @@ class Sql:
         if dbFile[-3:] != ".db":
             raise ExtentionError(extentionMessage(dbFile[-3:], ".db"))
         self.dbFile = dbFile
-        self.dbSchema = self.getDBSchema()
+        self.table = self.gettable()
 
     """
-        Méthode permettant de récupérer le dbSchema d'une base de données
+        Méthode permettant de récupérer le table d'une base de données
         Returns :
-            Le dbSchema de la base de données
+            Le table de la base de données
     """
-    def getDBSchema(self):
+    def gettable(self):
         connexion = sqlite3.connect(self.dbFile)
         cursor = connexion.cursor()
         cursor.execute("select name from sqlite_master where type='table'")
-        db = DBSchema()
+        db = table()
         for row in cursor.fetchall():
             info = cursor.execute("select sql from sqlite_master where type='table' and name = '"+row[0]+"'").fetchone()
             info = info[0]
@@ -439,26 +421,26 @@ class Sql:
                     res += i
             res = res[1:-1]
             res = res.split(",")
-            attributes = {}
+            schema = {}
             for sub in res:
                 t = sub.split(" ")
                 if(t[0] != ""):
-                    attributes[t[0]] = t[1]
+                    schema[t[0]] = t[1]
                 else:
-                    attributes[t[1]] = t[2]
-            db.addRelation(row[0], attributes)
+                    schema[t[1]] = t[2]
+            db.addRelation(row[0], schema)
         return db
 
     def do(self, request):
         if not isinstance(request, str):
             raise TypeError(errorMessage(request, "request", "string"))
-        
+
         connexion = Sqlite3.connect(self.dbFile)
         cursor = connexion.cursor()
         cursor.execute(request)
         print(cursor.fetchall())
-    
-        
+
+
 
 def extentionMessage(extention, correctExtetion):
     return "The extention must be "+str(correctExtention)+", however it is "+str(extention)+"."
@@ -466,19 +448,19 @@ def extentionMessage(extention, correctExtetion):
 def errorMessage(arg, argName, correctType):
     return "Argument " + str(argName) + " must be a " + str(correctType) + "."
 
-def doSql(connexion, request, dbSchema):
+def doSql(connexion, request, table):
     if not isinstance(connexion, sqlite3.Cursor):
         raise TypeError(errorMessage(connexion, "connexion", "sqlite3.Cursor"))
     if not isinstance(request, str):
         raise TypeError(errorMessage(request, "request", "string"))
-    if not isinstance(dbSchema, DBSchema):
-        raise TypeEroor(errorMessage(dbSchema, "dbSchema", "DBSchema"))
+    if not isinstance(table, table):
+        raise TypeEroor(errorMessage(table, "table", "table"))
     result = connexion.execute(request)
     # Cette liste reprend la longueur max de chaque colonne
     listLenRes = []
     # Cette liste reprend le nom des colonnes restantes
     listRes = []
-    
+
     for row in result:
         print(row)
         res = ""
@@ -493,39 +475,11 @@ def doSql(connexion, request, dbSchema):
         listRes.append(res)
     print(listLenRes)
     print(listRes)
-    
+
 
 if __name__ == "__main__":
-    conn = sqlite3.connect("testSql.db")
-    connexion = conn.cursor()
-    
 
-    print(type(connexion))
-
-    #connexion.execute("create table personne (nom text, prenom text, age int)")
-    connexion.execute("insert into personne values ('Cassart', 'Justin', 21)")
-    connexion.execute("insert into personne values ('Collin', 'Florent', 20)")
-    connexion.execute("insert into personne values ('Huon', 'Cyril', 20)")
-
-    connexion.execute("create table code (nom text, prenom text, language text)")
-    connexion.execute("insert into code values ('Cassart', 'Justin', 'JAVA')")
-    connexion.execute("insert into code values ('Cassart', 'Justin', 'PYTHON')")
-    connexion.execute("insert into code values ('Collin', 'Florent', 'JAVA')")
-    connexion.execute("insert into code values ('Collin', 'Florent', 'PYTHON')")
-    connexion.execute("insert into code values ('Collin', 'Florent', 'C++')")
-    # db = DBSchema("emp", {"A":"TEXT","B":"INT"})
-    # a = Diff(Proj(["A"], Rel(db)), Select(Eq("A", Const("Jean")), Proj(["A"], Rel(db))))
-    # print(a.toSql())
-    #db = DBSchema("personne", {"nom":"TEXT", "prenom":"TEXT", "age":"INTEGER"})
-    
-    #print(a.toSql())
-    #doSql(connexion, a.toSql(), db)
-
-    db = DBSchema({"personnes" : {"Name" : "TEXT", "Surname" : "TEXT", "Age" : "INTEGER"},
-                   "parents" : {"Name" : "INTEGER", "Surname" : "TEXT", "NumChildren" : "INTEGER"}})
-
-    #sql = Sql("testSql.db")
-    #db = sql.dbSchema
-    a = Proj(["prenom","nom"], Select(Greather("age", Const(10)), Rel(db)))
-    print(a.tosql())
-    #sql.do(a)
+    table1 = Table("ab", {"A":"TEXT","B":"INTEGER"})
+    table2 = Table("ac", {"A":"TEXT","C":"REAL"})
+    R = Join(Rel(table1), Rel(table2))
+    print(R.toSql())
