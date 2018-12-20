@@ -8,30 +8,43 @@ class DBSchema(object):
             name (str): nom du schéma de la base de données
             attributes (dict of (String:String): attributs de la relation (autrement dit, les colonnes de la relation)
                         ex : attributes = {"Name":"TEXT", "Number:"INTEGER"}"""
-    def __init__(self, name, attributes):
+    def __init__(self, schemas):
         #Vérification des types
-        if not isinstance(name, str):
-            raise ValueError(errorMessage(name, "name", "String"))
-        if not isinstance(attributes, dict):
-            raise ValueError(errorMessage(attributes, "attributes", "Dict"))
-        if not all(isinstance(item, str) for item in list(attributes.keys())):
-            raise ValueError(errorMessage(attributes, "attributes", "dict of String key and value"))
-        if not all(isinstance(item, str) for item in list(attributes.values())):
-            raise ValueError(errorMessage(attributes, "attributes", "dict of String key and value"))
+        if not isinstance(schemas, dict):
+            raise TypeError(errorMessage(schemas, "schemas", "Dict"))
 
-        self.name = name
-        self.attributes = attributes
+        if not all(isinstance(key, str) for key in list(schemas.keys())):
+            raise TypeError("Keys of schemas must be String")
+
+        if not all(isinstance(value, dict) for value in list(schemas.values())):
+            raise TypeError("Values of schemas must be dict")
+
+        for subSchema in schemas.values():
+            if not all(isinstance (key, str) for key in list(subSchema.keys())):
+                raise TypeError("Keys of subSchemas must be String")
+
+            if not all(isinstance (value, str) for value in list(subSchema.values())):
+                raise TypeError("Values of subSchemas must be String")
+
+        self.schemas = schemas
 
     """Méthode permettant de savoir si un attribut appartient à la relation
         Args:
             attribute (str): attribut à tester
         Returns:
             bool: True si l'attribut est un attribut de la relation, faux sinon"""
-    def isAttribute(self, attribute):
-        return attribute in self.attributes
+    def isAttribute(self, attribute, relationName):
+        if relationName in self.schemas and attribute in self.schemas[relationName]:
+            return True
+        return False
 
-    def getAttributeType(self, attribute):
-        return self.attributes[attribute]
+    def getAttributeType(self, attribute, relationName):
+        if self.isAttribute(attribute, relationName):
+            for i in range(len(self.schemas.keys())):
+                if list(self.schemas.keys())[i] == relationName:
+                    return list(self.schemas.values())[i][attribute]
+        else:
+            raise AttributeError(errorMessage(attribute, "attribute", "String"))
 
     """Méthode qui vérifie si le type de value correspond au type de l'attribut
         Args:
@@ -325,10 +338,29 @@ class Attribute:
         return self.attribute
 
 class AttributeError(Exception):
-    pass
+    def __init__(self, message):
+        self.message = message
 
 class SorteError(Exception):
     pass
+
+class ExtentionError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+class Sql:
+    def __init__(self, dbFile):
+        if not isinstance(dbFile, str):
+            raise TypeError(errorMessage(dbFile, "dbFile", "string"))
+        if dbFile[-3:] != ".db":
+            raise ExtentionError(extentionMessage(dbFile[-3:], ".db"))
+        self.dbFile = dbFile
+
+    def getDBSchema(self):
+        print()
+
+def extentionMessage(extention, correctExtetion):
+    return "The extention must be "+str(correctExtention)+", however it is "+str(extention)+"."
 
 def errorMessage(arg, argName, correctType):
     return "Argument " + str(argName) + " must be a " + str(correctType) + "."
@@ -343,35 +375,23 @@ def doSql(connexion, request, dbSchema):
     result = connexion.execute(request)
     # Cette liste reprend la longueur max de chaque colonne
     listLenRes = []
+    # Cette liste reprend le nom des colonnes restantes
     listRes = []
+    
     for row in result:
+        print(row)
         res = ""
         for i in range(len(row)):
             res += row[i]+" "
             try:
                 maxLen = listLenRes[i]
-                if len(row[i]) > maxLen:#on ajoute 2 parce que le nom est entouré d'un espace de chaque côté
+                if len(row[i]) > maxLen:
                     listLenRes[i] = len(row[i])
             except IndexError:
                 listLenRes.append(len(row[i]))
         listRes.append(res)
-    print(len(listLenRes))
-    for i in range(len(listRes)):
-        subString = listRes[i].split(" ")
-        print(subString,len(subString))
-        j = 0
-        print(i)
-        while j < len(subString):
-            print(j)
-            if subString[j] != "":
-                subString[j] += " "*(listLenRes[i]-len(subString[j]))
-            j += 1
-        listRes[i] = "| "
-        for sub in subString:
-            listRes[i] += sub
-        listRes[i] += " |"
-    for res in listRes:
-        print(res)
+    print(listLenRes)
+    print(listRes)
     
 
 if __name__ == "__main__":
@@ -389,7 +409,13 @@ if __name__ == "__main__":
     # db = DBSchema("emp", {"A":"TEXT","B":"INT"})
     # a = Diff(Proj(["A"], Rel(db)), Select(Eq("A", Const("Jean")), Proj(["A"], Rel(db))))
     # print(a.toSql())
-    db = DBSchema("personne", {"nom":"TEXT", "prenom":"TEXT", "age":"INTEGER"})
-    a = Proj(["prenom","nom"], Select(Greather("age", Const(10)), Rel(db)))
-    print(a.toSql())
-    doSql(connexion, a.toSql(), db)
+    #db = DBSchema("personne", {"nom":"TEXT", "prenom":"TEXT", "age":"INTEGER"})
+    #a = Proj(["prenom","nom"], Select(Greather("age", Const(10)), Rel(db)))
+    #print(a.toSql())
+    #doSql(connexion, a.toSql(), db)
+
+    db = DBSchema({"personnes" : {"Name" : "TEXT", "Surname" : "TEXT", "Age" : "INTEGER"},
+                   "parents" : {"Name" : "INTEGER", "Surname" : "TEXT", "NumChildren" : "INTEGER"}})
+    print(db.isAttribute("age", "personnes"))
+    print(db.getAttributeType("Name", "personnes"))
+    print(db.getAttributeType("rien", "parents"))

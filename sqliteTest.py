@@ -87,9 +87,9 @@ def showTables():
     tables = c.execute("select name from sqlite_master").fetchall()
     print(tables)
 
-def showColumns(tableName):
+"""def showColumns(tableName):
     columns = PRAGMA table_info(+tableName+))
-    print(columns)
+    print(columns)"""
 
     
 if __name__ == "__main__":
@@ -121,7 +121,9 @@ if __name__ == "__main__":
     c.execute("insert into parents values ('Courtecuisse', 'Christine', 3)")
     c.execute("insert into parents values ('Cassart', 'Rudy', 3)")
 
-    showColumns("personne")
+    #showColumns("personne")
+
+    showTables()
 
     
     # c.execute('''CREATE TABLE stocks (date text, trans text, symbol text, qty real, price real)''')
