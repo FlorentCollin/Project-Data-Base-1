@@ -379,25 +379,13 @@ class AttributeError(Exception):
 class SorteError(Exception):
     pass
 
-class ExtentionError(Exception):
-    def __init__(self, message):
-        self.message = message
 
-class SqlRequest:
-    def __init__(self, message):
-        if not isinstance(message, str):
-            raise TypeError(errorMessage(message, "message", "string"))
-
-        self.message = message
-
-class Sql:
+class SQLite:
     def __init__(self, dbFile):
         if not isinstance(dbFile, str):
             raise TypeError(errorMessage(dbFile, "dbFile", "string"))
-        if dbFile[-3:] != ".db":
-            raise ExtentionError(extentionMessage(dbFile[-3:], ".db"))
         self.dbFile = dbFile
-        self.table = self.gettable()
+        self.dbSchema = self.gettable()
 
     """
         Méthode permettant de récupérer le table d'une base de données
@@ -408,7 +396,7 @@ class Sql:
         connexion = sqlite3.connect(self.dbFile)
         cursor = connexion.cursor()
         cursor.execute("select name from sqlite_master where type='table'")
-        db = table()
+        db = DBSchema()
         for row in cursor.fetchall():
             info = cursor.execute("select sql from sqlite_master where type='table' and name = '"+row[0]+"'").fetchone()
             info = info[0]
@@ -428,58 +416,26 @@ class Sql:
                     schema[t[0]] = t[1]
                 else:
                     schema[t[1]] = t[2]
-            db.addRelation(row[0], schema)
+
+            db.addTable(Table(row[0], schema))
         return db
 
-    def do(self, request):
+    def execute(self, request):
         if not isinstance(request, str):
             raise TypeError(errorMessage(request, "request", "string"))
 
-        connexion = Sqlite3.connect(self.dbFile)
+        connexion = sqlite3.connect(self.dbFile)
         cursor = connexion.cursor()
         cursor.execute(request)
         print(cursor.fetchall())
 
-
-
-def extentionMessage(extention, correctExtetion):
-    return "The extention must be "+str(correctExtention)+", however it is "+str(extention)+"."
-
 def errorMessage(arg, argName, correctType):
     return "Argument " + str(argName) + " must be a " + str(correctType) + "."
 
-def doSql(connexion, request, table):
-    if not isinstance(connexion, sqlite3.Cursor):
-        raise TypeError(errorMessage(connexion, "connexion", "sqlite3.Cursor"))
-    if not isinstance(request, str):
-        raise TypeError(errorMessage(request, "request", "string"))
-    if not isinstance(table, table):
-        raise TypeEroor(errorMessage(table, "table", "table"))
-    result = connexion.execute(request)
-    # Cette liste reprend la longueur max de chaque colonne
-    listLenRes = []
-    # Cette liste reprend le nom des colonnes restantes
-    listRes = []
-
-    for row in result:
-        print(row)
-        res = ""
-        for i in range(len(row)):
-            res += row[i]+" "
-            try:
-                maxLen = listLenRes[i]
-                if len(row[i]) > maxLen:
-                    listLenRes[i] = len(row[i])
-            except IndexError:
-                listLenRes.append(len(row[i]))
-        listRes.append(res)
-    print(listLenRes)
-    print(listRes)
-
 
 if __name__ == "__main__":
-
-    table1 = Table("ab", {"A":"TEXT","B":"INTEGER"})
-    table2 = Table("ac", {"A":"TEXT","C":"REAL"})
-    R = Join(Rel(table1), Rel(table2))
-    print(R.toSql())
+    s = SQLite("test.db")
+    table = s.dbSchema.get("personne")
+    a = Proj(["nom"], Rel(table))
+    print(a.toSql())
+    s.execute(a.toSql())
