@@ -270,7 +270,7 @@ class Union(Rel):
     def toSql(self, delimiters=False):
         if delimiters:
             return "(" + self.toSql(False) + ")"
-        return "select * from " + self.rel1.toSql(True) + " union " + "(select * from " + self.rel2.toSql(True) + ")"
+        return "select * from " + self.rel1.toSql(True) + " union " + "select * from " + self.rel2.toSql(True)
 
 class Diff(Union): #Hérite de Union car la différence à les mêmes restrictions sur les attributs des relations que l'union
     """Classe représentant la Différence dans l'algèbre relationnelle (SPJRUD)
@@ -283,7 +283,7 @@ class Diff(Union): #Hérite de Union car la différence à les mêmes restrictio
     def toSql(self, delimiters=False):
         if delimiters:
             return "(" + self.toSql(False) + ")"
-        return "select * from " + self.rel1.toSql(True) + " except " + self.rel2.toSql(True)
+        return "select * from " + self.rel1.toSql(True) + " except " + "select * from " + self.rel2.toSql(True)
 
 
 class Operation:
@@ -412,7 +412,7 @@ class SQLite:
         cursor = connexion.cursor()
         cursor.execute(request.toSql())
         result = cursor.fetchall()
-        if _print:
+        if _print and len(result) != 0:
             df = pd.DataFrame(result)
             df.columns = request.table.schema.keys()
             print(df)
@@ -426,5 +426,9 @@ def errorMessage(arg, argName, correctType):
 if __name__ == "__main__":
     s = SQLite("test.db")
     table = s.dbSchema.get("personne")
-    a = Proj(["prenom","age","nom"], Rel(table))
+    table2 = s.dbSchema.get("parents")
+    print(table2.schema)
+    a = Join(Rel(table), Proj(["nom", "prenom", "nombreEnfant"], Rel(table2)))
+    print(a.toSql())
+
     s.execute(a, True)
