@@ -368,14 +368,14 @@ class SQLite:
         if not isinstance(dbFile, str):
             raise TypeError(errorMessage(dbFile, "dbFile", "string"))
         self.dbFile = dbFile
-        self.dbSchema = self.gettable()
+        self.dbSchema = self.getDBSchema()
 
     """
         Méthode permettant de récupérer le table d'une base de données
         Returns :
             Le table de la base de données
     """
-    def gettable(self):
+    def getDBSchema(self):
         connexion = sqlite3.connect(self.dbFile)
         cursor = connexion.cursor()
         cursor.execute("select name from sqlite_master where type='table'")
