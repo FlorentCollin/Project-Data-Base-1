@@ -36,5 +36,6 @@ class TestStringMethods(unittest.TestCase):
         R = Diff(Rel(table1), Rel(table2))
         self.assertEqual(R.toSql(), 'select * from ab except ac')
 
+
 if __name__ == '__main__':
     unittest.main()
