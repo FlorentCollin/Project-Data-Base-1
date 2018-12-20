@@ -31,6 +31,7 @@ class DBSchema(object):
     """Méthode permettant de savoir si un attribut appartient à la relation
         Args:
             attribute (str): attribut à tester
+            relationName (str) : nom de la relation
         Returns:
             bool: True si l'attribut est un attribut de la relation, faux sinon"""
     def isAttribute(self, attribute, relationName):
@@ -38,7 +39,16 @@ class DBSchema(object):
             return True
         return False
 
+    """
+        Méthode permettant de connaître le type d'un attribut
+        Args :
+            attribute (str) : attribut dont on veut connaître le type
+            relationName (str) : nom de la ration dont doit appartenir l'attribut
+        Returns :
+            Le type de l'attribut si l'attribut appartient à la relation
+    """
     def getAttributeType(self, attribute, relationName):
+        #Test de si la relation appartient à la base de donnée
         if self.isAttribute(attribute, relationName):
             for i in range(len(self.schemas.keys())):
                 if list(self.schemas.keys())[i] == relationName:
@@ -52,8 +62,8 @@ class DBSchema(object):
             value : valeur dont on veut vérifier si le type correspond bien à la colonne (attribut)
         Returns:
             bool: True si le type correspond, False sinon"""
-    def checkType(self, attribute, value):
-        attributeType = self.getAttributeType(attribute)
+    def checkType(self, attribute, value, relationName):
+        attributeType = self.getAttributeType(attribute, relationName)
         #Remplacement du type python par le type accepté par SQLite3
         if isinstance(value, int):
             return attributeType == "INTEGER"
@@ -65,17 +75,32 @@ class DBSchema(object):
             return False
 
     def __str__(self):
-        names = "Name  |"
-        types = "Types |"
-        for attribute in self.attributes:
-            maximum = max(len(attribute), len(self.attributes[attribute]))
-            names += " "+attribute+" "*(maximum-len(attribute))+" |"
-            types += " "+self.attributes[attribute]+" "*(maximum-len(self.attributes[attribute]))+" |"
-        l = len(names)
-        lenName = len(self.name)
-        title = " "*(int(l/2)-int(lenName/2))+str(self.name)
-        borders = "-"*l
-        return title+"\n"+borders+"\n"+names+"\n"+types+"\n"+borders
+        listTab = []
+        namesTitle = "| Names |"
+        typesTitle = "| Types |"
+        for i in range(len(list(self.schemas.keys()))):
+            subSchema = list(self.schemas.values())[i]
+            names = namesTitle
+            types = typesTitle
+            for j in range(len(list(subSchema.keys()))):
+                name = list(subSchema.keys())[j]
+                typ = list(subSchema.values())[j]
+                if len(name) > len(typ):
+                    names += name + " |"
+                    types += typ + " "*(len(name)-len(typ)) + " |"
+                else:
+                    names += name + " "*(len(typ)-len(name)) + " |"
+                    types += typ + " |"
+            borders = "-"*len(names)
+            l = int((len(names)-len(namesTitle))/2) - int((len(list(self.schemas.keys())[i]))/2)-1
+            title = "|" + " "*l + list(self.schemas.keys())[i] + " "*l + "|"
+            res = " "*len(namesTitle) + "-"*len(title)+"\n"+" "*len(namesTitle)+title+"\n"+borders+"\n"+names+"\n"+types+"\n"+borders
+            listTab.append(res)
+
+        finalRes = ""
+        for tab in listTab:
+            finalRes += tab+"\n"+""+"\n"
+        return finalRes
 
     def __repr__(self):
         return __str__
@@ -416,6 +441,5 @@ if __name__ == "__main__":
 
     db = DBSchema({"personnes" : {"Name" : "TEXT", "Surname" : "TEXT", "Age" : "INTEGER"},
                    "parents" : {"Name" : "INTEGER", "Surname" : "TEXT", "NumChildren" : "INTEGER"}})
-    print(db.isAttribute("age", "personnes"))
-    print(db.getAttributeType("Name", "personnes"))
-    print(db.getAttributeType("rien", "parents"))
+
+    print(db)
