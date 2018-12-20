@@ -1,4 +1,5 @@
 import copy
+import sqlite3
 
 
 class DBSchema(object):
@@ -51,7 +52,17 @@ class DBSchema(object):
             return False
 
     def __str__(self):
-        return str(self.name) + " " + str(self.attributes)
+        names = "Name  |"
+        types = "Types |"
+        for attribute in self.attributes:
+            maximum = max(len(attribute), len(self.attributes[attribute]))
+            names += " "+attribute+" "*(maximum-len(attribute))+" |"
+            types += " "+self.attributes[attribute]+" "*(maximum-len(self.attributes[attribute]))+" |"
+        l = len(names)
+        lenName = len(self.name)
+        title = " "*(int(l/2)-int(lenName/2))+str(self.name)
+        borders = "-"*l
+        return title+"\n"+borders+"\n"+names+"\n"+types+"\n"+borders
 
     def __repr__(self):
         return __str__
@@ -138,7 +149,7 @@ class Proj(Rel):
         #On vérifie que chaque attribut de la liste d'attributs donnée en argument est bien un attribut du DBSchema
         for attribute in attributes:
             if not self.rel.dbSchema.isAttribute(attribute):
-                raise ValueError(attribut + " is not an attribute in the DBSchema")
+                raise ValueError(attribute + " is not an attribute in the DBSchema")
 
         #Mise à jour de la liste d'attributs pour ne garder que les attributs de liste donnée en argument
         self.dbSchema.attributes = {key : self.dbSchema.attributes[key] for key in attributes}
@@ -148,7 +159,7 @@ class Proj(Rel):
     def toSql(self, delimiters=False):
         if delimiters:
             return "(" + self.toSql(False) + ")"
-        res = "select "
+        res = "select distinct "
         for attribute in self.attributes:
             res += attribute + ", "
         return res[:-2] + " from " + self.rel.toSql(True)
@@ -255,11 +266,11 @@ class Operation:
             raise ValueError(errorMessage(symbol, "symbol", "=, >, >=, <, <="))
         self.symbol = symbol
 
-        if not isinstance(parm1, str):#
+        if not isinstance(param1, str):
             raise ValueError(errorMessage(param1, "param1", "String"))
         self.param1 = param1
 
-        if not (isinstance(param2, Const) and not isinstance(param2, Attribute)):#
+        if not (isinstance(param2, Const) and not isinstance(param2, Attribute)):
             raise ValueError(errorMessage(param2, "param2", "Const or Attribute"))
         self.param2 = param2
 
@@ -285,6 +296,7 @@ class Less(Operation):
     """Classe représentant l'opération (<)"""
     def __init__(self, param1, param2):
         super().__init__("<", param1, param2)
+        
 class LessOrEqal(Operation):
     """Classe représentant l'opération (<=)"""
     def __init__(self, param1, param2):
@@ -302,7 +314,7 @@ class Const:
         if isinstance(self.const, str):
             return '"' + self.const + '"'
         else:
-            return self.const
+            return str(self.const)
 
 class Attribute:
     """Classe qui contient un nom d'attribut, utilisé lors de la sélection"""
@@ -321,6 +333,63 @@ class SorteError(Exception):
 def errorMessage(arg, argName, correctType):
     return "Argument " + str(argName) + " must be a " + str(correctType) + "."
 
-# db = DBSchema("emp", {"A":"TEXT","B":"INT"})
-# a = Diff(Proj(["A"], Rel(db)), Select(Eq("A", Const("Jean")), Proj(["A"], Rel(db))))
-# print(a.toSql())
+def doSql(connexion, request, dbSchema):
+    if not isinstance(connexion, sqlite3.Cursor):
+        raise TypeError(errorMessage(connexion, "connexion", "sqlite3.Cursor"))
+    if not isinstance(request, str):
+        raise TypeError(errorMessage(request, "request", "string"))
+    if not isinstance(dbSchema, DBSchema):
+        raise TypeEroor(errorMessage(dbSchema, "dbSchema", "DBSchema"))
+    result = connexion.execute(request)
+    # Cette liste reprend la longueur max de chaque colonne
+    listLenRes = []
+    listRes = []
+    for row in result:
+        res = ""
+        for i in range(len(row)):
+            res += row[i]+" "
+            try:
+                maxLen = listLenRes[i]
+                if len(row[i]) > maxLen:#on ajoute 2 parce que le nom est entouré d'un espace de chaque côté
+                    listLenRes[i] = len(row[i])
+            except IndexError:
+                listLenRes.append(len(row[i]))
+        listRes.append(res)
+    print(len(listLenRes))
+    for i in range(len(listRes)):
+        subString = listRes[i].split(" ")
+        print(subString,len(subString))
+        j = 0
+        print(i)
+        while j < len(subString):
+            print(j)
+            if subString[j] != "":
+                subString[j] += " "*(listLenRes[i]-len(subString[j]))
+            j += 1
+        listRes[i] = "| "
+        for sub in subString:
+            listRes[i] += sub
+        listRes[i] += " |"
+    for res in listRes:
+        print(res)
+    
+
+if __name__ == "__main__":
+    conn = sqlite3.connect("testSql.db")
+
+    connexion = conn.cursor()
+
+    print(type(connexion))
+
+    #connexion.execute("create table personne (nom text, prenom text, age int)")
+    connexion.execute("insert into personne values ('Cassart', 'Justin', 21)")
+    connexion.execute("insert into personne values ('Collin', 'Florent', 20)")
+    connexion.execute("insert into personne values ('Huon', 'Cyril', 20)")
+
+    # db = DBSchema("emp", {"A":"TEXT","B":"INT"})
+    # a = Diff(Proj(["A"], Rel(db)), Select(Eq("A", Const("Jean")), Proj(["A"], Rel(db))))
+    # print(a.toSql())
+    db = DBSchema("personne", {"nom":"TEXT", "prenom":"TEXT", "age":"INTEGER"})
+    a = Proj(["prenom","nom"], Select(Greather("age", Const(10)), Rel(db)))
+    print(a.toSql())
+    doSql(connexion, a.toSql(), db)
