@@ -4,6 +4,18 @@ import pandas as pd
 
 class DBSchema(object):
     """Classe représentant un schema de base de données."""
+    def __init__(self, tables = None):
+        if tables != None:
+            if not isinstance(tables, dict):
+                raise TypeError(messageError(tables, "tables", "dict"))
+            if not all(isinstance(name, str) for name in list(tables.keys())):
+                raise TypeError("Keys of tables must be string")
+            if not all(isinstance(table, Table) for table in list(tables.values())):
+                raise TypeError("Values of tables must be Table")
+            self.tables = tables
+        else:
+            self.tables = {}
+    
     def addTable(self, table):
         if not isinstance(table, Table):
             raise TypeError(table + " : table must be a Table")
@@ -14,6 +26,15 @@ class DBSchema(object):
 
     def get(self, name):
         return self.tables[name]
+
+    def __str__(self):
+        res = ""
+        for table in list(self.tables.values()):
+            res += table.__str__()+"\n"
+        return res
+
+    def __repr__(self):
+        return __str__
 
 
 class Table(object):
@@ -72,7 +93,7 @@ class Table(object):
         attributeType = self.getAttributeType(attribute)
         #Remplacement du type python par le type accepté par SQLite3
         if isinstance(value, int):
-            return attributeType == "INTEGER"
+            return attributeType == "INT"
         elif isinstance(value, str):
             return attributeType == "TEXT"
         elif isinstance(value, float):
@@ -80,7 +101,7 @@ class Table(object):
         else:
             return False
 
-    def __str__(self): #A MODIFIER
+    def __str__(self):
         names = "Name  |"
         types = "Types |"
         for attribute in self.schema:
@@ -367,6 +388,12 @@ class SQLite:
     def __init__(self, dbFile):
         if not isinstance(dbFile, str):
             raise TypeError(errorMessage(dbFile, "dbFile", "string"))
+        print("extention : ",dbFile[-3:])
+        if dbFile[-3:] != ".db":
+            #soit on affiche juste un message stipulant qu'il n'y ait pas de table dans le fichier
+            print("There is no data base in these file")
+            #soit on lève carrément une erreur
+            raise(TypeError("These file is not a data base file"))
         self.dbFile = dbFile
         self.dbSchema = self.getDBSchema()
 
@@ -426,6 +453,8 @@ def errorMessage(arg, argName, correctType):
 if __name__ == "__main__":
     s = SQLite("test.db")
     table = s.dbSchema.get("personne")
+    print(table)
+    print(s.dbSchema)
     table2 = s.dbSchema.get("parents")
     print(table2.schema)
     a = Join(Rel(table), Proj(["nom", "prenom", "nombreEnfant"], Rel(table2)))
