@@ -1,6 +1,7 @@
 import unittest
 from algebraToSql import *
 
+#Classe permettant d'exécuter des tests unitaires utiles pour le dévelopemment de la librairie
 class TestStringMethods(unittest.TestCase):
 
     def test_Select(self):
@@ -60,6 +61,45 @@ class TestStringMethods(unittest.TestCase):
         table = Table("emp", {"A":"TEXT","B":"INTEGER"})
         with self.assertRaises(ValueError):
             Proj('a', Rel(table))
+
+    def test_ProjErr2(self):
+        table = Table("emp", {"A":"TEXT","B":"INTEGER"})
+        with self.assertRaises(ValueError):
+            Proj(["C"], Rel(table))
+
+    def test_JoinErr1(self):
+        table = Table("emp", {"A":"TEXT","B":"INTEGER"})
+        table1 = Table("emp", {"A":"INTEGER","B":"INTEGER"})
+        with self.assertRaises(TypeError):
+            Join(Rel(table),Rel(table1))
+
+    def test_RenameErr1(self):
+        table = Table("emp", {"A":"TEXT","B":"INTEGER"})
+        with self.assertRaises(AttributeError):
+            Rename("C", "C", Rel(table))
+
+    def test_RenameErr2(self):
+        table = Table("emp", {"A":"TEXT","B":"INTEGER"})
+        with self.assertRaises(ValueError):
+            Rename("A", 1, Rel(table))
+
+    def test_RenameErr3(self):
+        table = Table("emp", {"A":"TEXT","B":"INTEGER"})
+        with self.assertRaises(AttributeError):
+            Rename("A", "B", Rel(table))
+
+    def test_UnionErr1(self):
+        table = Table("emp", {"A":"TEXT","B":"INTEGER"})
+        table1 = Table("emp", {"C":"TEXT","B":"INTEGER"})
+        with self.assertRaises(SorteError):
+            Union(Rel(table),Rel(table1))
+
+    def test_UnionErr2(self):
+        table = Table("emp", {"A":"TEXT","B":"INTEGER"})
+        table1 = Table("emp", {"A":"INTEGER","B":"INTEGER"})
+        with self.assertRaises(TypeError):
+            Union(Rel(table),Rel(table1))
+
 
 if __name__ == '__main__':
     unittest.main()

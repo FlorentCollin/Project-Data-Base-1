@@ -105,8 +105,11 @@ class Table(object):
         names = "Name  |"
         types = "Types |"
         for attribute in self.schema:
+            # maximum = longueur la plus longue entre le nom et le type
             maximum = max(len(attribute), len(self.schema[attribute]))
+            # on ajoute les noms à la chaîne de caractères names
             names += " "+attribute+" "*(maximum-len(attribute))+" |"
+            # on ajoute les types à chaîne de caractères types
             types += " "+self.schema[attribute]+" "*(maximum-len(self.schema[attribute]))+" |"
         l = len(names)
         lenName = len(self.name)
@@ -201,7 +204,7 @@ class Proj(Rel):
         super().__init__(rel)
         self.rel = rel
         if not isinstance(attributes, list):
-            raise ValueError(errorMessage(schema, "schema", "list"))
+            raise ValueError(errorMessage(attributes, "attributes", "list"))
 
         #On vérifie que chaque attribut de la liste d'attributs donnée en argument est bien un attribut de la table
         for attribute in attributes:
@@ -483,17 +486,22 @@ class SQLite:
             info = info[0]
             parentPassed = False
             res = ""
+            # On récupère simplement les noms des colonnes avec leurs types
             for i in info:
                 if i == "(":
                     parentPassed = True
                 if parentPassed == True:
                     res += i
+            # On enlève les parenthèses entre les noms et types de colonnes
+            # De "(colonne1 type1, colonne2 type2)" on obtient "colonne1 type1, colonne2 type2"
             res = res[1:-1]
+             # On récupère une liste comme ["colonne1 type1", " colonne2 type2"]
             res = res.split(",")
             schema = {}
             for sub in res:
                 t = sub.split(" ")
-                if(t[0] != ""):
+                if(t[0] != ""):# Si l'indice est différent de 0, le premier caractère de la chaîne est un espace
+                                # Par conséquent on aurait avec le split(" ") un tableau du genre ["", "colonne1", "type1"]
                     schema[t[0]] = t[1]
                 else:
                     schema[t[1]] = t[2]
