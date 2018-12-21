@@ -39,3 +39,34 @@ La classe *Rel* est la classe mère, elle représente une relation.
 table = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
 rel = Rel(table) #représente la relation associé à la table "employee"
 ```
+
+##### La classe Select
+La classe *Select* représente la sélection dans l'algèbre SPJRUD. Le constructeur de cette classe prend en paramètre une opération (=,>,>=, <, <=) et une relation.
+
+```python
+table = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+s = Select(Eq("name", Const("Jean")), Rel(table))#Const représente une constanste
+s = Select(Eq("number", Attribute("salary")), Rel(table))
+#Attribute représente un attribut d'une table
+s = Select(Greather("salary", Const(1500)), Rel(table))
+s = Select(GreatherOrEqual("salary", Const(1000)), Rel(table))
+s = Select(Less("salary", Const(2000)), Rel(table))
+s = Select(LessOrEqal("salary", Const(1500)), Rel(table))
+```
+
+##### La classe Proj
+La classe *Proj* représente la projection dans l'algèbre SPJRUD. Le constructeur de cette classe prend en paramètre une liste des attributs sur lesquels projeter et une relation.
+
+```python
+table = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+p = Proj(["name", "salary"], Rel(table))
+```
+
+##### La classe Join
+La classe *Join* représente la jointure dans l'algèbre SPJRUD. Le constructeur de cette classe prend en paramètre deux relations.
+
+```python
+employee = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+departement = Table("departement", {"name":"TEXT", "loc":"TEXT"})
+j = Join(Rel(employee), Rel(departement))
+```

@@ -15,7 +15,7 @@ class DBSchema(object):
             self.tables = tables
         else:
             self.tables = {}
-    
+
     def addTable(self, table):
         if not isinstance(table, Table):
             raise TypeError(table + " : table must be a Table")
@@ -322,7 +322,7 @@ class Operation:
             raise ValueError(errorMessage(param1, "param1", "String"))
         self.param1 = param1
 
-        if not (isinstance(param2, Const) and not isinstance(param2, Attribute)):
+        if not (isinstance(param2, Const) or isinstance(param2, Attribute)):
             raise ValueError(errorMessage(param2, "param2", "Const or Attribute"))
         self.param2 = param2
 
@@ -375,7 +375,6 @@ class Attribute:
 
     def __str__(self):
         return self.attribute
-
 class AttributeError(Exception):
     def __init__(self, message):
         self.message = message
@@ -451,13 +450,21 @@ def errorMessage(arg, argName, correctType):
 
 
 if __name__ == "__main__":
-    s = SQLite("test.db")
-    table = s.dbSchema.get("personne")
-    print(table)
-    print(s.dbSchema)
-    table2 = s.dbSchema.get("parents")
-    print(table2.schema)
-    a = Join(Rel(table), Proj(["nom", "prenom", "nombreEnfant"], Rel(table2)))
-    print(a.toSql())
-
-    s.execute(a, True)
+    table = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+    s = Select(Eq("name", Const("Jean")), Rel(table))#Const représente une constanste
+    s = Select(Eq("number", Attribute("salary")), Rel(table))
+    #Attribute représente un attribut d'une table
+    s = Select(Greather("salary", Const(1500.0)), Rel(table))
+    s = Select(GreatherOrEqual("salary", Const(1000.0)), Rel(table))
+    s = Select(Less("salary", Const(2000.0)), Rel(table))
+    s = Select(LessOrEqal("salary", Const(1500.0)), Rel(table))
+    # s = SQLite("test.db")
+    # table = s.dbSchema.get("personne")
+    # print(table)
+    # print(s.dbSchema)
+    # table2 = s.dbSchema.get("parents")
+    # print(table2.schema)
+    # a = Join(Rel(table), Proj(["nom", "prenom", "nombreEnfant"], Rel(table2)))
+    # print(a.toSql())
+    #
+    # s.execute(a, True)
