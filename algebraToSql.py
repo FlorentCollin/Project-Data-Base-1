@@ -172,15 +172,15 @@ class Select(Rel):
 
         #On vérifie que l'attribut de l'opération est bien un attribut du table
         if not self.table.isAttribute(operation.param1):
-            raise AttributeError('"' + operation.param1 + '"' + " in operation is not an attribute of the table")
+            raise AttributeError('"' + operation.param1 + '"' + " in operation is not an attribute of the table " + self.table.name + " "  + str(list(self.table.schema.keys())))
 
         #Si le membre de droite de l'opération est aussi un attribut, on vérifie qu'il fait bien partie de la table
         if isinstance(operation.param2, Attribute) and not self.table.isAttribute(operation.param2.attribute):
-            raise AttributeError('"' + operation.param2 + '"' + " in operation is not an attribute of the table")
+            raise AttributeError('"' + operation.param2 + '"' + " in operation is not an attribute of the table" + self.table.name + " "  + str(list(self.table.schema.keys())))
 
         #Si le membre de droite de l'opération est une constante, on vérifie que le type de cette constante correspond au type de l'attribut
         if isinstance(operation.param2, Const) and not self.table.checkType(operation.param1, operation.param2.const):
-            raise ValueError("The type of operation.param2 : " + str(operation.param2) + " doesn't correspond to attribute's type : " + str(self.table.getAttributeType(operation.param1)))
+            raise TypeError("The type of operation.param2 : " + str(operation.param2) + " doesn't correspond to attribute's type : " + str(self.table.getAttributeType(operation.param1)))
 
     def toSql(self, delimiters=False):
         if delimiters:
@@ -206,7 +206,7 @@ class Proj(Rel):
         #On vérifie que chaque attribut de la liste d'attributs donnée en argument est bien un attribut de la table
         for attribute in attributes:
             if not self.rel.table.isAttribute(attribute):
-                raise ValueError(attribute + " is not an attribute in the table :" + self.table.name)
+                raise ValueError(attribute + " is not an attribute in the table : " + self.table.name + " "  + str(list(self.table.schema.keys())))
 
         #Mise à jour de la liste d'attributs pour ne garder que les attributs de liste donnée en argument
         self.table.schema = {key : self.table.schema[key] for key in attributes}
@@ -234,8 +234,12 @@ class Join(Rel):
             rel2 (Rel): relation de droite de la jointure (rel1 x rel2)"""
     def __init__(self, rel1, rel2):
         super().__init__(rel1, rel2)
+        for key in list(rel1.table.schema.keys()):
+            if key in list(rel2.table.schema.keys()):
+                if rel1.table.schema[key] != rel2.table.schema[key]:
+                    raise TypeError("The type of " + key + " is not the same in " + str(rel1) + " and " + str(rel2))
         #On rajoute au dictionnaire d'attributs les attributs de rel2
-        self.table.schema.update(self.table2.schema) #Vérifier que les colonnes ayant le m nom doivent avoir le m type
+        self.table.schema.update(self.table2.schema)
         self.rel1 = rel1
         self.rel2 = rel2
 
@@ -298,10 +302,10 @@ class Union(Rel):
         super().__init__(rel1, rel2)
         #On vérifie que les attributs de rel1 sont égaux au attributs de rel2 (ie: sorte(rel1) = sorte(rel2))
         if not set(self.table.schema.keys()) == set(self.table2.schema.keys()):
-            raise SorteError("Sorte of rel1  must be equal to sorte of rel2")
+            raise SorteError("Attributes of " + str(rel1) + "  must be equal to attributes of " + str(rel2))
         for attribute in list(self.table.schema.keys()):
             if not (self.table.getAttributeType(attribute) == self.table2.getAttributeType(attribute)):
-                raise TypeError("All attribute's type of rel1 and rel2 must be equal")
+                raise TypeError("All attribute's type of " + str(rel1) + " and " + str(rel2) + " must be equal")
         self.rel1 = rel1
         self.rel2 = rel2
 
@@ -519,4 +523,5 @@ def errorMessage(arg, argName, correctType):
 
 if __name__ == "__main__":
     table = Table("emp", {"name":"TEXT", "sal":"INTEGER"})
-    print(Diff(Rel(table),Rel(table)))
+    table1 = Table("emp", {"name":"INTEGER", "sala":"INTEGER"})
+    s = Union(Rel(table), Rel(table1))
