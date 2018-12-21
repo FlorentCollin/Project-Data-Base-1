@@ -11,7 +11,7 @@ Pour pouvoir utilisé la librairie *algebraToSql*, la librairie *pandas* doit ê
 
 Installation sur Windows:
 ```
-python pip -m install -r requirements.txt
+pip install -r requirements.txt
 ```
 Installation sur les distributions Linux:
 ```
@@ -63,7 +63,7 @@ s = Select(Eq("number", Attribute("salary")), Rel(table))
 s = Select(Greather("salary", Const(1500)), Rel(table))
 s = Select(GreatherOrEqual("salary", Const(1000)), Rel(table))
 s = Select(Less("salary", Const(2000)), Rel(table))
-s = Select(LessOrEqal("salary", Const(1500)), Rel(table))
+s = Select(LessOrEqual("salary", Const(1500)), Rel(table))
 ```
 
 ##### La classe Proj
