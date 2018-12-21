@@ -6,6 +6,18 @@ en détail comment utiliser la librairie. Quant aux choix de modélisation ils r
 
 Cette section a pour but d'expliquer et de montrer le fonctionnement de la librairie nommée *algebraToSql*.
 
+### Prérequis
+Pour pouvoir utilisé la librairie *algebraToSql*, la librairie *pandas* doit être installé. Cette librairie a été utilisé dans le projet afin d'améliorer l'affichage de la réponse des requêtes sur une base de données SQLite3. Un fichier *requirements.txt* est disponible afin de facilité l'installation de *pandas*.
+
+Installation sur Windows:
+```
+python pip -m install -r requirements.txt
+```
+Installation sur les distributions Linux:
+```
+pip3 install -r requirements.txt
+```
+
 ### Création de requêtes SPJRUD
 Afin de créer des requêtes en algèbre SPJRUD, il est nécessaire d'importer la librairie *algebraToSql*.
 
@@ -120,5 +132,20 @@ Chaque requête en algèbre SPJRUD peut être convertie en requête SQL grâce �
 table = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
 p = Proj(["name", "salary"], Rel(table))
 p_sql = p.toSql()
-# p_sql = "select distinct name, salary from employee"
+# p_sql est égal à "select distinct name, salary from employee"
+```
+#### Utilisation des requêtes SPJRUD sur une base de données SQLite3
+Afin d'utiliser les requêtes SPJRUD sur une base de données SQLite3 il est nécessaire de créer une instance de la classe SQLite. Cette classe permet d'effectuer des requêtes sur une base de données déjà existante et de récupérer un DBSchema qui représente les différentes tables de cette base de données.
+
+```python
+s = SQLite("test.db") # "test.db" est le nom du fichier contenant la base de données
+#On récupère un object DBSchema qui représente le schéma de la base de données
+db = s.dbSchema
+# On récupère la table "employee" dans le schéma de base de données
+# et on crée une projection sur "name"
+request = Proj(["name"], Rel(db.get("employee")))
+# On peut ensuite exécuter cette requête
+result = s.execute(request)
+# On peut aussi juste afficher le résultat de la requête
+s.execute(request, _print=True)
 ```
