@@ -70,3 +70,29 @@ employee = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"
 departement = Table("departement", {"name":"TEXT", "loc":"TEXT"})
 j = Join(Rel(employee), Rel(departement))
 ```
+
+##### La classe Rename
+La classe *Rename* représente le renommage dans l'algèbre SPJRUD. Le constructeur de cette classe prend en paramètre l'attribut à renommer (String), le nouveau nom de l'attribut (String) et une relation.
+
+```python
+table = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+r = Rename("name", "Nom", Rel(table))
+```
+
+##### La classe Union
+La classe *Union* représente l'union dans l'algèbre SPJRUD. Le constructeur de cette classe prend en paramètre deux relations ayant les mêmes attributs
+
+```python
+employee = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+employee2 = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+j = Join(Rel(employee), Rel(employee2))
+```
+
+##### La classe Diff
+La classe *Diff* représente la différence dans l'algèbre SPJRUD. Le constructeur de cette classe prend en paramètre deux relations ayant les mêmes attributs.
+
+```python
+employee = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+employee2 = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+j = Diff(Rel(employee), Rel(employee2))
+```

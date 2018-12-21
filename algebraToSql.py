@@ -450,14 +450,9 @@ def errorMessage(arg, argName, correctType):
 
 
 if __name__ == "__main__":
-    table = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
-    s = Select(Eq("name", Const("Jean")), Rel(table))#Const représente une constanste
-    s = Select(Eq("number", Attribute("salary")), Rel(table))
-    #Attribute représente un attribut d'une table
-    s = Select(Greather("salary", Const(1500.0)), Rel(table))
-    s = Select(GreatherOrEqual("salary", Const(1000.0)), Rel(table))
-    s = Select(Less("salary", Const(2000.0)), Rel(table))
-    s = Select(LessOrEqal("salary", Const(1500.0)), Rel(table))
+    employee = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+    employee2 = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+    j = Join(Rel(employee), Rel(employee2))
     # s = SQLite("test.db")
     # table = s.dbSchema.get("personne")
     # print(table)
