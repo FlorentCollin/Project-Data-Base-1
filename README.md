@@ -66,8 +66,9 @@ p = Proj(["name", "salary"], Rel(table))
 La classe *Join* représente la jointure dans l'algèbre SPJRUD. Le constructeur de cette classe prend en paramètre deux relations.
 
 ```python
-employee = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
-departement = Table("departement", {"name":"TEXT", "loc":"TEXT"})
+employee = Table("employee",
+          {"name":"TEXT", "number":"INTEGER", "salary":"REAL", "deptName":"TEXT"})
+departement = Table("departement", {"deptName":"TEXT", "loc":"TEXT"})
 j = Join(Rel(employee), Rel(departement))
 ```
 
@@ -95,4 +96,29 @@ La classe *Diff* représente la différence dans l'algèbre SPJRUD. Le construct
 employee = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
 employee2 = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
 j = Diff(Rel(employee), Rel(employee2))
+```
+
+### Combinaison de requêtes SPJRUD
+L'atout majeur de l'algèbre SPJRUD est la combinaison de requêtes. Il est donc possible de le faire facilement.
+
+```python
+#Exemple de combinaison de requêtes SPJRUD
+employee = Table("employee",
+    {"name":"TEXT", "number":"INTEGER", "salary":"REAL", "deptName":"TEXT"})
+departement = Table("departement", {"name":"TEXT", "loc":"TEXT"})
+S = Select(Eq("name", Const("Jean")), Rel(employee))
+P = Proj(["name", "salary"], S)
+
+R = Rename("name", "deptName", Rel(departement))
+J = Join(R, Rel(employee))
+```
+
+### Conversion en requêtes SQL
+Chaque requête en algèbre SPJRUD peut être convertie en requête SQL grâce à la fonction toSql().
+
+```python
+table = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+p = Proj(["name", "salary"], Rel(table))
+p_sql = p.toSql()
+# p_sql = "select distinct name, salary from employee"
 ```

@@ -450,9 +450,12 @@ def errorMessage(arg, argName, correctType):
 
 
 if __name__ == "__main__":
-    employee = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
-    employee2 = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
-    j = Join(Rel(employee), Rel(employee2))
+    table = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
+    p = Proj(["name", "salary"], Rel(table))
+    p_sql = p.toSql()
+    print(p_sql)
+    # p_sql = "select name, salary from employee"
+
     # s = SQLite("test.db")
     # table = s.dbSchema.get("personne")
     # print(table)
