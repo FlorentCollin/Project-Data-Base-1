@@ -1,4 +1,7 @@
 # Introduction
+Membres du groupe : *COLLIN Florent, CASSART Justin*
+
+
 Ce rapport regroupe le guide d’utilisation de la librairie et les choix de modélisation. Le guide d’utilisation explique
 en détail comment utiliser la librairie. Quant aux choix de modélisation, ils reprennent l’explication des choix effectués lors du développement.
 
@@ -98,7 +101,7 @@ La classe *Union* représente l'union dans l'algèbre SPJRUD. Le constructeur de
 ```python
 employee = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
 employee2 = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
-j = Join(Rel(employee), Rel(employee2))
+u = Union(Rel(employee), Rel(employee2))
 ```
 
 ##### La classe Diff
@@ -107,7 +110,7 @@ La classe *Diff* représente la différence dans l'algèbre SPJRUD. Le construct
 ```python
 employee = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
 employee2 = Table("employee", {"name":"TEXT", "number":"INTEGER", "salary":"REAL"})
-j = Diff(Rel(employee), Rel(employee2))
+d = Diff(Rel(employee), Rel(employee2))
 ```
 
 ### Combinaison de requêtes SPJRUD
@@ -155,7 +158,7 @@ s.execute(request, _print=True)
 ##### Classe DBSchema
 La classe DBSchema permet de stocker un schéma de base de données. Sa méthode addTable(table) peut être utilisée pour ajouter au schéma de base de données une table. Et la méthode get(name) permet de récupérer la table correspondant au nom donné en paramètre.
 ##### Classe Table
-Cette classe permet de simple de gérer une seule table. Il est ainsi possible depuis cette classe de connaître le nom de chacune des colonnes avec leurs types.
+Cette classe permet de gérer un seul schéma de table.
 
 Pour implémenter cette classe, deux solutions étaient possibles.
 * Utiliser une liste pour les attributs et un autre pour les types des attributs
@@ -177,4 +180,4 @@ Cette classe, qui est utilisée pour la sélection, permet de facilement écrire
 Cette classe permet simplement d'utiliser un(e) constante/attribut dans une méthode SPJRUD. De cette façon il est plus simple de gérer si le paramètre est bien un(e) constante/attribut sans devoir se soucier de tous les types possibles.
 
 ##### Classe SQLite
-C'est cette classe qui exécute la requête SQL. Il suffit de lui passer en paramètre le nom du fichier contenant la base de données. Connaissant ce fichier la classe est capable de déterminer le DBSchema. De ce fait pour obtenir une table l'utilisateur n'a tout simplement qu'à passer en argument le nom de la table qu'il souhaite utiliser depuis le DBSchema de cette classe.
+C'est cette classe qui exécute la requête SQL. Il suffit de lui passer en paramètre le nom du fichier contenant la base de données. Connaissant ce fichier, la classe est capable de déterminer le DBSchema. De ce fait pour obtenir une table l'utilisateur n'a tout simplement qu'à passer en argument le nom de la table qu'il souhaite utiliser depuis le DBSchema de cette classe.
