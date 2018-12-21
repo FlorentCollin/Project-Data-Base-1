@@ -28,14 +28,38 @@ class TestStringMethods(unittest.TestCase):
         table1 = Table("ab", {"A":"TEXT","B":"INTEGER"})
         table2 = Table("ac", {"A":"TEXT","B":"INTEGER"})
         R = Union(Rel(table1), Rel(table2))
-        self.assertEqual(R.toSql(), 'select * from ab union (select * from ac)')
+        self.assertEqual(R.toSql(), 'select * from ab union select * from ac')
 
     def test_Diff(self):
         table1 = Table("ab", {"A":"TEXT","B":"INTEGER"})
         table2 = Table("ac", {"A":"TEXT","B":"INTEGER"})
         R = Diff(Rel(table1), Rel(table2))
-        self.assertEqual(R.toSql(), 'select * from ab except ac')
+        self.assertEqual(R.toSql(), 'select * from ab except select * from ac')
 
+    def test_SelectErr1(self):
+        table = Table("emp", {"A":"TEXT","B":"INTEGER"})
+        with self.assertRaises(ValueError):
+            Select("a", Rel(table))
+
+    def test_SelectErr2(self):
+        table = Table("emp", {"A":"TEXT","B":"INTEGER"})
+        with self.assertRaises(AttributeError):
+            Select(Eq("a", Const("Jean")), Rel(table))
+
+    def test_SelectErr3(self):
+        table = Table("emp", {"A":"TEXT","B":"INTEGER"})
+        with self.assertRaises(AttributeError):
+            Select(Eq("A", Attribute("Jean")), Rel(table))
+
+    def test_SelectErr4(self):
+        table = Table("emp", {"A":"TEXT","B":"INTEGER"})
+        with self.assertRaises(TypeError):
+            Select(Eq("A", Const(1)), Rel(table))
+
+    def test_ProjErr1(self):
+        table = Table("emp", {"A":"TEXT","B":"INTEGER"})
+        with self.assertRaises(ValueError):
+            Proj('a', Rel(table))
 
 if __name__ == '__main__':
     unittest.main()

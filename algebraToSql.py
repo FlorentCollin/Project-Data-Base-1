@@ -176,7 +176,7 @@ class Select(Rel):
 
         #Si le membre de droite de l'opération est aussi un attribut, on vérifie qu'il fait bien partie de la table
         if isinstance(operation.param2, Attribute) and not self.table.isAttribute(operation.param2.attribute):
-            raise AttributeError('"' + operation.param2 + '"' + " in operation is not an attribute of the table" + self.table.name + " "  + str(list(self.table.schema.keys())))
+            raise AttributeError('"' + str(operation.param2) + '"' + " in operation is not an attribute of the table" + self.table.name + " "  + str(list(self.table.schema.keys())))
 
         #Si le membre de droite de l'opération est une constante, on vérifie que le type de cette constante correspond au type de l'attribut
         if isinstance(operation.param2, Const) and not self.table.checkType(operation.param1, operation.param2.const):
@@ -443,7 +443,7 @@ class Attribute:
         return self.attribute
 
     def __str__(self):
-        return "Attribute(" + str(self.const) + ")"
+        return "Attribute(" + str(self.attribute) + ")"
 
     def __repr__(self):
         return self.__str__()
