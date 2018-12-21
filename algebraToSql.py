@@ -527,9 +527,3 @@ class SQLite:
 
 def errorMessage(arg, argName, correctType):
     return "Argument " + str(argName) + " must be a " + str(correctType) + "."
-
-
-if __name__ == "__main__":
-    table = Table("emp", {"name":"TEXT", "sal":"INTEGER"})
-    table1 = Table("emp", {"name":"INTEGER", "sala":"INTEGER"})
-    s = Union(Rel(table), Rel(table1))
