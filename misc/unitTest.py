@@ -1,5 +1,7 @@
-import unittest
+import sys
+sys.path.append('..')
 from algebraToSql import *
+import unittest
 
 #Classe permettant d'exécuter des tests unitaires utiles pour le dévelopemment de la librairie
 class TestStringMethods(unittest.TestCase):
