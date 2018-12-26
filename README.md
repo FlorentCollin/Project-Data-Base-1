@@ -9,8 +9,6 @@ en détail comment utiliser la librairie. Quant aux choix de modélisation, ils 
 
 Cette section a pour but d'expliquer et de montrer le fonctionnement de la librairie nommée *algebraToSql*.
 
-<<<<<<< HEAD
-=======
 ### Prérequis
 Pour pouvoir utilisé la librairie *algebraToSql*, la librairie *pandas* doit être installé. Cette librairie a été utilisée dans le projet afin d'améliorer l'affichage de la réponse des requêtes sur une base de données SQLite3. Un fichier *requirements.txt* est disponible afin de faciliter l'installation de *pandas*.
 
@@ -23,7 +21,6 @@ Installation sur les distributions Linux:
 pip3 install -r requirements.txt
 ```
 
->>>>>>> e50468d02a6a94c213080c93b01a8afab15a43af
 ### Création de requêtes SPJRUD
 Afin de créer des requêtes en algèbre SPJRUD, il est nécessaire d'importer la librairie *algebraToSql*.
 
