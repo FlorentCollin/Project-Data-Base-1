@@ -93,7 +93,7 @@ class Table(object):
         attributeType = self.getAttributeType(attribute)
         #Remplacement du type python par le type accepté par SQLite3
         if isinstance(value, int):
-            return attributeType == "INT"
+            return attributeType == "INTEGER"
         elif isinstance(value, str):
             return attributeType == "TEXT"
         elif isinstance(value, float):
@@ -105,8 +105,11 @@ class Table(object):
         names = "Name  |"
         types = "Types |"
         for attribute in self.schema:
+            # maximum = longueur la plus longue entre le nom et le type
             maximum = max(len(attribute), len(self.schema[attribute]))
+            # on ajoute les noms à la chaîne de caractères names
             names += " "+attribute+" "*(maximum-len(attribute))+" |"
+            # on ajoute les types à chaîne de caractères types
             types += " "+self.schema[attribute]+" "*(maximum-len(self.schema[attribute]))+" |"
         l = len(names)
         lenName = len(self.name)
@@ -115,7 +118,7 @@ class Table(object):
         return title+"\n"+borders+"\n"+names+"\n"+types+"\n"+borders
 
     def __repr__(self):
-        return __str__
+        return __str__()
 
 class Rel:
     """Classe représentant une relation. C'est la classe mère des classes des expressions algébriques SPJRUD
@@ -151,6 +154,10 @@ class Rel:
     def toSql(self, delimiters=False):
         return self.table.name
 
+    def __str__(self):
+        return "Rel(" + self.toSql() + ")"
+    def __repr__(self):
+        return self.__str__()
 
 class Select(Rel):
     """Classe représentant la Sélection dans l'algèbre relationnelle (SPJRUD)
@@ -168,21 +175,25 @@ class Select(Rel):
 
         #On vérifie que l'attribut de l'opération est bien un attribut du table
         if not self.table.isAttribute(operation.param1):
-            raise AttributeError('"' + operation.param1 + '"' + " in operation is not an attribute of the table")
+            raise AttributeError('"' + operation.param1 + '"' + " in operation is not an attribute of the table " + self.table.name + " "  + str(list(self.table.schema.keys())))
 
-        #Si le membre de droite de l'opération est aussi un attribut, on vérifie qu'il fait bien partie du table
+        #Si le membre de droite de l'opération est aussi un attribut, on vérifie qu'il fait bien partie de la table
         if isinstance(operation.param2, Attribute) and not self.table.isAttribute(operation.param2.attribute):
-            raise AttributeError('"' + operation.param2 + '"' + " in operation is not an attribute of the table")
+            raise AttributeError('"' + str(operation.param2) + '"' + " in operation is not an attribute of the table" + self.table.name + " "  + str(list(self.table.schema.keys())))
 
         #Si le membre de droite de l'opération est une constante, on vérifie que le type de cette constante correspond au type de l'attribut
         if isinstance(operation.param2, Const) and not self.table.checkType(operation.param1, operation.param2.const):
-            raise ValueError("The type of operation.param2 doesn't correspond to attribute's type : " + str(self.table.getAttributeType(operation.param1)))
+            raise TypeError("The type of operation.param2 : " + str(operation.param2) + " doesn't correspond to attribute's type : " + str(self.table.getAttributeType(operation.param1)))
 
     def toSql(self, delimiters=False):
         if delimiters:
             return "(" + self.toSql(False) + ")"
         return "select * from " + self.rel.toSql(True) + " where " + self.operation.toSql()
 
+    def __str__(self):
+        return "Select(" + str(self.operation) + ", " + str(self.rel) + ")"
+    def __repr__(self):
+        return self.__str__()
 
 class Proj(Rel):
     """Classe représentant la Projection dans l'algèbre relationnelle (SPJRUD)
@@ -193,12 +204,12 @@ class Proj(Rel):
         super().__init__(rel)
         self.rel = rel
         if not isinstance(attributes, list):
-            raise ValueError(errorMessage(schema, "schema", "list"))
+            raise ValueError(errorMessage(attributes, "attributes", "list"))
 
         #On vérifie que chaque attribut de la liste d'attributs donnée en argument est bien un attribut de la table
         for attribute in attributes:
             if not self.rel.table.isAttribute(attribute):
-                raise ValueError(attribute + " is not an attribute in the table")
+                raise ValueError(attribute + " is not an attribute in the table : " + self.table.name + " "  + str(list(self.table.schema.keys())))
 
         #Mise à jour de la liste d'attributs pour ne garder que les attributs de liste donnée en argument
         self.table.schema = {key : self.table.schema[key] for key in attributes}
@@ -213,6 +224,10 @@ class Proj(Rel):
             res += attribute + ", "
         return res[:-2] + " from " + self.rel.toSql(True)
 
+    def __str__(self):
+        return "Proj(" + str(self.attributes) + ", " + str(self.rel) + ")"
+    def __repr__(self):
+        return self.__str__()
 
 
 class Join(Rel):
@@ -222,8 +237,12 @@ class Join(Rel):
             rel2 (Rel): relation de droite de la jointure (rel1 x rel2)"""
     def __init__(self, rel1, rel2):
         super().__init__(rel1, rel2)
+        for key in list(rel1.table.schema.keys()):
+            if key in list(rel2.table.schema.keys()):
+                if rel1.table.schema[key] != rel2.table.schema[key]:
+                    raise TypeError("The type of " + key + " is not the same in " + str(rel1) + " and " + str(rel2))
         #On rajoute au dictionnaire d'attributs les attributs de rel2
-        self.table.schema.update(self.table2.schema) #Vérifier que les colonnes ayant le m nom doivent avoir le m type
+        self.table.schema.update(self.table2.schema)
         self.rel1 = rel1
         self.rel2 = rel2
 
@@ -231,6 +250,11 @@ class Join(Rel):
         if delimiters:
             return "(" + self.toSql(False) + ")"
         return "select * from " + self.rel1.toSql(True) + " natural join " + "(select * from " + self.rel2.toSql(True) + ")"
+
+    def __str__(self):
+        return "Join(" + str(self.rel1) + ", " + str(self.rel2) + ")"
+    def __repr__(self):
+        return self.__str__()
 
 class Rename(Rel):
     """Classe représentant le Rennomage dans l'algèbre relationnelle (SPJRUD)
@@ -243,7 +267,7 @@ class Rename(Rel):
         self.rel = rel
         #On vérifie qu'attributeFrom est bien le nom d'un attribut du table
         if not self.table.isAttribute(attributeFrom):
-            raise AttributeError(attributeFrom + " is not the name of an attribute")
+            raise AttributeError(attributeFrom + " is not a name of an attribute")
         self.attributeFrom = attributeFrom
 
         if not isinstance(attributeTo, str):
@@ -281,10 +305,10 @@ class Union(Rel):
         super().__init__(rel1, rel2)
         #On vérifie que les attributs de rel1 sont égaux au attributs de rel2 (ie: sorte(rel1) = sorte(rel2))
         if not set(self.table.schema.keys()) == set(self.table2.schema.keys()):
-            raise SorteError("Sorte of rel1 must be equal to sorte of rel2")
+            raise SorteError("Attributes of " + str(rel1) + "  must be equal to attributes of " + str(rel2))
         for attribute in list(self.table.schema.keys()):
             if not (self.table.getAttributeType(attribute) == self.table2.getAttributeType(attribute)):
-                raise TypeError("All attribute's type of rel1 and rel2 must be equal")
+                raise TypeError("All attribute's type of " + str(rel1) + " and " + str(rel2) + " must be equal")
         self.rel1 = rel1
         self.rel2 = rel2
 
@@ -292,6 +316,11 @@ class Union(Rel):
         if delimiters:
             return "(" + self.toSql(False) + ")"
         return "select * from " + self.rel1.toSql(True) + " union " + "select * from " + self.rel2.toSql(True)
+
+    def __str__(self):
+        return "Union(" + str(self.rel1) + ", " + str(self.rel2) + ")"
+    def __repr__(self):
+        return self.__str__()
 
 class Diff(Union): #Hérite de Union car la différence à les mêmes restrictions sur les attributs des relations que l'union
     """Classe représentant la Différence dans l'algèbre relationnelle (SPJRUD)
@@ -306,6 +335,10 @@ class Diff(Union): #Hérite de Union car la différence à les mêmes restrictio
             return "(" + self.toSql(False) + ")"
         return "select * from " + self.rel1.toSql(True) + " except " + "select * from " + self.rel2.toSql(True)
 
+    def __str__(self):
+        return "Diff(" + str(self.rel1) + ", " + str(self.rel2) + ")"
+    def __repr__(self):
+        return self.__str__()
 
 class Operation:
     """Classe représentant une opération parmi (=, >, >=, <, <=)
@@ -327,32 +360,62 @@ class Operation:
         self.param2 = param2
 
     def toSql(self):
-        return str(self.param1) + self.symbol + str(self.param2)
+        return str(self.param1) + self.symbol + self.param2.toSql()
 
 class Eq(Operation):
     """Classe représentant l'équalité (=)"""
     def __init__(self, param1, param2):
         super().__init__("=", param1, param2)
 
+    def __str__(self):
+        return "Eq(" + str(self.param1) + ", " + str(self.param2) + ")"
+
+    def __repr__(self):
+        return self.__str__()
+
 class Greather(Operation):
     """Classe représentant l'opération (>)"""
     def __init__(self, param1, param2):
         super().__init__(">", param1, param2)
+
+    def __str__(self):
+        return "Greather(" + str(self.param1) + ", " + str(self.param2) + ")"
+
+    def __repr__(self):
+        return self.__str__()
 
 class GreatherOrEqual(Operation):
     """Classe représentant l'opération (>=)"""
     def __init__(self, param1, param2):
         super().__init__(">=", param1, param2)
 
+    def __str__(self):
+        return "GreatherOrEqual(" + str(self.param1) + ", " + str(self.param2) + ")"
+
+    def __repr__(self):
+        return self.__str__()
+
 class Less(Operation):
     """Classe représentant l'opération (<)"""
     def __init__(self, param1, param2):
         super().__init__("<", param1, param2)
 
-class LessOrEqal(Operation):
+    def __str__(self):
+        return "Less(" + str(self.param1) + ", " + str(self.param2) + ")"
+
+    def __repr__(self):
+        return self.__str__()
+
+class LessOrEqual(Operation):
     """Classe représentant l'opération (<=)"""
     def __init__(self, param1, param2):
         super().__init__("<=", param1, param2)
+
+    def __str__(self):
+        return "LessOrEqual(" + str(self.param1) + ", " + str(self.param2) + ")"
+
+    def __repr__(self):
+        return self.__str__()
 
 
 
@@ -361,20 +424,32 @@ class Const:
     def __init__(self, const):
         self.const = const
 
-    def __str__(self):
+    def toSql(self):
         #On rajoute des "" si la constante est un String pour que la représentation en SQL soit correcte
         if isinstance(self.const, str):
             return '"' + self.const + '"'
         else:
             return str(self.const)
 
+    def __str__(self):
+        return "Const(" + str(self.const) + ")"
+
+    def __repr__(self):
+        return self.__str__()
+
 class Attribute:
     """Classe qui contient un nom d'attribut, utilisé lors de la sélection"""
     def __init__(self, attribute):
         self.attribute = attribute
 
-    def __str__(self):
+    def toSql(self):
         return self.attribute
+
+    def __str__(self):
+        return "Attribute(" + str(self.attribute) + ")"
+
+    def __repr__(self):
+        return self.__str__()
 class AttributeError(Exception):
     def __init__(self, message):
         self.message = message
@@ -411,17 +486,22 @@ class SQLite:
             info = info[0]
             parentPassed = False
             res = ""
+            # On récupère simplement les noms des colonnes avec leurs types
             for i in info:
                 if i == "(":
                     parentPassed = True
                 if parentPassed == True:
                     res += i
+            # On enlève les parenthèses entre les noms et types de colonnes
+            # De "(colonne1 type1, colonne2 type2)" on obtient "colonne1 type1, colonne2 type2"
             res = res[1:-1]
+             # On récupère une liste comme ["colonne1 type1", " colonne2 type2"]
             res = res.split(",")
             schema = {}
             for sub in res:
                 t = sub.split(" ")
-                if(t[0] != ""):
+                if(t[0] != ""):# Si l'indice est différent de 0, le premier caractère de la chaîne est un espace
+                                # Par conséquent on aurait avec le split(" ") un tableau du genre ["", "colonne1", "type1"]
                     schema[t[0]] = t[1]
                 else:
                     schema[t[1]] = t[2]
@@ -447,6 +527,7 @@ class SQLite:
 
 def errorMessage(arg, argName, correctType):
     return "Argument " + str(argName) + " must be a " + str(correctType) + "."
+<<<<<<< HEAD
 
 
 if __name__ == "__main__":
@@ -466,3 +547,5 @@ if __name__ == "__main__":
     # print(a.toSql())
     #
     # s.execute(a, True)
+=======
+>>>>>>> e50468d02a6a94c213080c93b01a8afab15a43af
