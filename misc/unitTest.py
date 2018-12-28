@@ -1,3 +1,5 @@
+# Note : cette classe peut être lancé depuis le dossier /misc avec la commande :
+# python3 unitTest.py
 import sys
 sys.path.append('..')
 from algebraToSql import *
